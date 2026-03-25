@@ -1,6 +1,0 @@
-- [x] descarregar livro Isabel-
-- [x] escolher motor
-- [x] escolher encoder
-- [x] escolher foc (avaliar protocolos de comunicação)
-- [x] lista de preços
-- [ ] mini-relatório
