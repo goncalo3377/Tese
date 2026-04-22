@@ -1,0 +1,49 @@
+
+#include <SimpleFOC.h>
+#include <SimpleFOCDrivers.h>
+#include <encoders/mt6835/MagneticSensorMT6835.h>
+
+BLDCMotor motor = BLDCMotor(7);
+BLDCDriver3PWM driver = BLDCDriver3PWM(4, 5, 6, 7);
+MagneticSensorMT6835 sensor = MagneticSensorMT6835(10);
+uint16_t t_ant = 0;
+
+
+void setup() {
+  Serial.begin(115200);
+  driver.voltage_power_supply = 12.0;
+  driver.voltage_limit = 12.0;
+  driver.init();
+  motor.linkDriver(&driver);
+
+  sensor.init();
+  motor.linkSensor(&sensor);
+
+
+
+
+
+  //motor.foc_modulation = FOCModulationType::SinePWM;
+  motor.voltage_limit = 3;   // Tensão enviada para as fases
+  motor.velocity_limit = 100; 
+  motor.controller = MotionControlType::velocity_openloop;
+
+  motor.init();
+  motor.enable(); // Liga explicitamente
+  delay(2000);
+  
+}
+
+void loop() {
+  motor.loopFOC();
+  motor.move(1); // rad/s
+  //sensor.update();
+  if (millis() - t_ant > 1000){
+    t_ant = millis();
+    Serial.printf("%.4f\n", sensor.getAngle());
+    Serial.print("\t");
+    Serial.println(sensor.getVelocity());
+  }
+}
+  
+
