@@ -48,7 +48,7 @@ void setup() {
 void loop() {
   motor_Pitch.loopFOC();
   float setpoint_normalizado = remainder(alvo_partilhado,2*PI);
-  motor_Pitch.move(setpoint_normalizado);
+  motor_Pitch.move(PI+setpoint_normalizado);
 }
 
 
