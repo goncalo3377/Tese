@@ -1,6 +1,7 @@
 #include <SimpleFOC.h>
 #include <SimpleFOCDrivers.h>
 #include <encoders/mt6835/MagneticSensorMT6835.h>
+#include "comunicacao.h"
 
 // 7 pares de polos, 8.85 Ohms, 225.53 KV
 BLDCMotor motor_Pitch = BLDCMotor(7, 8.85, 225.53);
@@ -99,10 +100,11 @@ for (;;) { // Loop infinito da tarefa
     }
   }
 
-  Serial.printf(">posicao_Pitch:%.4f\n", motor_Pitch.shaft_angle);
-  Serial.printf(">tensao_aplicada_Pitch:%.3f\n", motor_Pitch.voltage.q);
-  Serial.printf(">posicao_Yaw:%.4f\n", motor_Yaw.shaft_angle);
-  Serial.printf(">tensao_aplicada_Yaw:%.3f\n", motor_Yaw.voltage.q);
+  
+  //Serial.printf(">tensao_aplicada_Pitch:%.3f\n", motor_Pitch.voltage.q);
+  //Serial.printf(">posicao_Yaw:%.4f\n", motor_Yaw.shaft_angle);
+  //Serial.printf(">tensao_aplicada_Yaw:%.3f\n", motor_Yaw.voltage.q);
+  enviarTelemetria(motor_Pitch.shaft_angle, motor_Pitch.shaft_velocity, motor_Pitch.voltage.q, motor_Pitch.voltage.d);
   //delay em ms
   vTaskDelay(pdMS_TO_TICKS(100));
 }
