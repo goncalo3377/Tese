@@ -13,12 +13,20 @@ struct __attribute__((packed)) TelemetriaTX {
 struct __attribute__((packed)) ComandoRX {
     uint16_t header; // Deve vir como 0xDDCC
     uint8_t modo_id;
-    float kp;
-    float ki;
-    float kd;
-    float lpf_encoder;
-    float setpoint;
+    bool malhafechada;
+    float kp_Pitch;
+    float ki_Pitch;
+    float kd_Pitch;
+    float lpf_encoder_Pitch;
+    float kp_Yaw;
+    float ki_Yaw;
+    float kd_Yaw;
+    float lpf_encoder_Yaw;
+    float setpoint_Pitch;
+    float setpoint_Yaw;
 };
+
+ComandoRX comando;
 
 // Exemplo de Envio do ESP32 para o PC a cada 20ms:
 void enviarTelemetria(float posicao, float velocidade, float tensao_vq, float tensao_vd ) {
@@ -33,9 +41,8 @@ void enviarTelemetria(float posicao, float velocidade, float tensao_vq, float te
 }
 
 // Exemplo de Receção no ESP32 dentro do loop():
-ComandoRX lerTelemetria() {
+ComandoRX receberTelemetria() {
     if (Serial.available() >= sizeof(ComandoRX)) {
-        ComandoRX comando;
         // Espreita os primeiros dois bytes para ver se é o cabeçalho de comando correto
         uint16_t checkHeader;
         Serial.readBytes((char*)&checkHeader, 2);
@@ -44,10 +51,10 @@ ComandoRX lerTelemetria() {
             comando.header = checkHeader;
             // Lê o resto dos bytes diretamente para a memória da struct temporária
             Serial.readBytes((char*)&comando + 2, sizeof(ComandoRX) - 2);
-            
         } else {
             // Se o header estava corrompido, limpa 1 byte do buffer para tentar realinhar no próximo ciclo
             Serial.read();
         }
     }
+    return comando;
 }

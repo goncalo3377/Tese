@@ -15,9 +15,15 @@ BLDCDriver3PWM driver_Yaw = BLDCDriver3PWM(15, 16, 17, 18);
 MagneticSensorMT6835 sensor_Pitch = MagneticSensorMT6835(10);
 MagneticSensorMT6835 sensor_Yaw = MagneticSensorMT6835(9);
 
-volatile float alvo_partilhado = 0.0; //rad
+volatile float alvo_partilhado_Pitch = 0.0;
+volatile float alvo_partilhado_Yaw = 0.0; 
+
+volatile float setpoint_Pitch = 0.0; 
+volatile float kd_Yaw = 0.0; 
+volatile float lpf_encoder_pitch = 0.0; 
 
 void comunicacao(void * pvParameters);
+void aplicarParametros(ComandoRX parametros);
 
 void setup() {
   Serial.begin(115200);
@@ -76,9 +82,10 @@ void setup() {
 void loop() {
   motor_Pitch.loopFOC();
   motor_Yaw.loopFOC();
-  float setpoint_normalizado = remainder(alvo_partilhado,2*PI);
-  motor_Pitch.move(PI+setpoint_normalizado);
-  motor_Yaw.move(PI+setpoint_normalizado);
+  float setpoint_normalizado_Pitch = remainder(alvo_partilhado_Pitch,2*PI);
+  float setpoint_normalizado_Yaw = remainder(alvo_partilhado_Yaw,2*PI);
+  motor_Pitch.move(PI+setpoint_normalizado_Pitch);
+  motor_Yaw.move(PI+setpoint_normalizado_Yaw);
 }
 
 
@@ -87,8 +94,11 @@ void comunicacao(void * pvParameters) {
 String inputString = "";
 inputString.reserve(10);
 
+
 for (;;) { // Loop infinito da tarefa
+  /*
   while (Serial.available() > 0) {
+    
     char inChar = (char)Serial.read();
     if (inChar == '\n' || inChar == '\r') {
       if (inputString.length() > 0) {
@@ -99,14 +109,75 @@ for (;;) { // Loop infinito da tarefa
       inputString += inChar;
     }
   }
-
+*/
   
   //Serial.printf(">tensao_aplicada_Pitch:%.3f\n", motor_Pitch.voltage.q);
   //Serial.printf(">posicao_Yaw:%.4f\n", motor_Yaw.shaft_angle);
   //Serial.printf(">tensao_aplicada_Yaw:%.3f\n", motor_Yaw.voltage.q);
   enviarTelemetria(motor_Pitch.shaft_angle, motor_Pitch.shaft_velocity, motor_Pitch.voltage.q, motor_Pitch.voltage.d);
+
+  //enviarTelemetria(setpoint_Pitch, kd_Yaw, lpf_encoder_pitch, motor_Pitch.voltage.d);
+
+
+  ComandoRX parametros = receberTelemetria();
+  aplicarParametros(parametros);
+  
+  setpoint_Pitch = parametros.setpoint_Pitch;
+  kd_Yaw = parametros.kp_Yaw;
+  lpf_encoder_pitch = parametros.lpf_encoder_Pitch;
+  
   //delay em ms
   vTaskDelay(pdMS_TO_TICKS(100));
 }
+}
 
+
+void aplicarParametros(ComandoRX parametros){
+    // 1. Atualizar os ganhos PID e Filtros normalmente
+    /*
+    motor_Pitch.PID_velocity.P = parametros.kp_Pitch;
+    motor_Pitch.PID_velocity.I = parametros.ki_Pitch;
+    motor_Pitch.PID_velocity.D = parametros.kd_Pitch;
+    motor_Pitch.LPF_angle = parametros.lpf_encoder_Pitch;
+
+    motor_Yaw.PID_velocity.P = parametros.kp_Yaw;
+    motor_Yaw.PID_velocity.I = parametros.ki_Yaw;
+    motor_Yaw.PID_velocity.D = parametros.kd_Yaw;
+    motor_Yaw.LPF_angle = parametros.lpf_encoder_Yaw;
+    */
+    // =========================================================================
+    // 2. A SOLUÇÃO: Mudar o tipo de controlo do SimpleFOC baseado no Modo do PC
+    // =========================================================================
+    /*
+    if (parametros.modo_id == 3) { 
+        // --- MODO POSIÇÃO (ÂNGULO) ---
+        if (parametros.malhafechada) {
+            motor_Pitch.controller = MotionControlType::angle;
+            motor_Yaw.controller = MotionControlType::angle;
+        } else {
+            motor_Pitch.controller = MotionControlType::angle_openloop;
+            motor_Yaw.controller = MotionControlType::angle_openloop;
+        }
+    } 
+    else if (parametros.modo_id == 4) { 
+        // --- MODO VELOCIDADE ---
+        if (parametros.malhafechada) {
+            motor_Pitch.controller = MotionControlType::velocity;
+            motor_Yaw.controller = MotionControlType::velocity;
+        } else {
+            motor_Pitch.controller = MotionControlType::velocity_openloop;
+            motor_Yaw.controller = MotionControlType::velocity_openloop;
+        }
+    }
+    else if (parametros.modo_id == 1 || parametros.modo_id == 2) {
+        // --- MODOS ONDA (Seno / Quadrada) ---
+        // Como no teu Python diz "Seno (tensão)", assume-se controlo por voltagem direta (Torque)
+        motor_Pitch.controller = MotionControlType::torque;
+        motor_Yaw.controller = MotionControlType::torque;
+    }
+
+    */
+    // 3. Atualizar os alvos com o valor que veio na mesma variável de setpoint
+    alvo_partilhado_Pitch = parametros.setpoint_Pitch;
+    alvo_partilhado_Yaw = parametros.setpoint_Yaw;
 }

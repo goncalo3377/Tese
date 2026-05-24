@@ -21,7 +21,7 @@ class SerialManager(QThread):
         self.expected_header = 0xBBAA 
 
         # --- ESTRUTURA DE ENVIO (Comandos para o ESP32) ---
-        self.tx_format = "<H B fffff"
+        self.tx_format = "<H B ? ffffffffff"
 
     def run(self):
         try:
@@ -72,11 +72,11 @@ class SerialManager(QThread):
 
 
                 
-    def send_cmd(self, modo_id, kp, ki, kd, lpf, setpoint):
+    def send_cmd(self, modo_id, malhafechada, kp_pitch, ki_pitch, kd_pitch, lpf_pitch, kp_yaw, ki_yaw, kd_yaw, lpf_yaw, setpoint_pitch, setpoint_yaw):
         if self.ser and self.ser.is_open:
             try:
                 cmd_header = 0xDDCC
-                packet = struct.pack(self.tx_format, cmd_header, modo_id, kp, ki, kd, lpf, setpoint)
+                packet = struct.pack(self.tx_format, cmd_header, modo_id, malhafechada, kp_pitch, ki_pitch, kd_pitch, lpf_pitch, kp_yaw, ki_yaw, kd_yaw, lpf_yaw, setpoint_pitch, setpoint_yaw)
                 self.ser.write(packet)
             except Exception as e:
                 self.error_occurred.emit(f"Falha ao enviar comando: {e}")
