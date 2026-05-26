@@ -202,6 +202,8 @@ void comunicacao(void * pvParameters) {
             motor_Yaw.voltage.q,   
             motor_Yaw.voltage.d,   
             alvo_instantaneo_Yaw);
+            
+            delay_telemetria = millis();
         }
     }
     

@@ -4,7 +4,7 @@ import time
 import pyqtgraph as pg
 from pyqtgraph import PlotWidget
 from PySide6.QtWidgets import QApplication
-from PySide6.QtCore import QFile, Slot, Qt
+from PySide6.QtCore import QFile, Slot, Qt, QTimer
 from PySide6.QtUiTools import QUiLoader
 from communication import SerialManager
 
@@ -69,20 +69,23 @@ curve_y_vq = window.widget_tensaoq_Yaw.plot(pen='g', width=2)
 curve_y_sp_vq = window.widget_tensaoq_Yaw.plot(pen=pg.mkPen('#00ffcc', width=1.5, style=Qt.DashLine))
 
 # --- REFEITORADO: ATUALIZAÇÃO FLUIDA DA INTERFACE (SINAL REAL-TIME) ---
-@Slot(dict)
-def update_ui_with_real_data(telemetria):
+
+def update_and_render_gui():
     global modo_enviado
     
-    for k, eixo in [("pitch", "P"), ("yaw", "Y")]:
-        t = telemetria[k]
-        buffers[eixo]["pos"] = buffers[eixo]["pos"][1:] + [t["pos"]]
-        buffers[eixo]["vel"] = buffers[eixo]["vel"][1:] + [t["vel"]]
-        buffers[eixo]["vq"]  = buffers[eixo]["vq"][1:]  + [t["vq"]]
-        
-        # Alinhamento automático do setpoint conforme a grandeza física sob teste
-        buffers[eixo]["sp_pos"] = buffers[eixo]["sp_pos"][1:] + [t["sp"] if "Posição" in modo_enviado else 0.0]
-        buffers[eixo]["sp_vel"] = buffers[eixo]["sp_vel"][1:] + [t["sp"] if "Velocidade" in modo_enviado else 0.0]
-        buffers[eixo]["sp_vq"]  = buffers[eixo]["sp_vq"][1:]  + [t["sp"] if ("Seno" in modo_enviado or "Quadrada" in modo_enviado) else 0.0]
+    telemetria = serial_worker.get_latest_telemetry()
+    
+    if telemetria is not None:
+        for k, eixo in [("pitch", "P"), ("yaw", "Y")]:
+            t = telemetria[k]
+            buffers[eixo]["pos"] = buffers[eixo]["pos"][1:] + [t["pos"]]
+            buffers[eixo]["vel"] = buffers[eixo]["vel"][1:] + [t["vel"]]
+            buffers[eixo]["vq"]  = buffers[eixo]["vq"][1:]  + [t["vq"]]
+            
+            # Alinhamento automático do setpoint conforme a grandeza física sob teste
+            buffers[eixo]["sp_pos"] = buffers[eixo]["sp_pos"][1:] + [t["sp"] if "Posição" in modo_enviado else 0.0]
+            buffers[eixo]["sp_vel"] = buffers[eixo]["sp_vel"][1:] + [t["sp"] if "Velocidade" in modo_enviado else 0.0]
+            buffers[eixo]["sp_vq"]  = buffers[eixo]["sp_vq"][1:]  + [t["sp"] if ("Seno" in modo_enviado or "Quadrada" in modo_enviado) else 0.0]
 
     # Atualização de ecrãs de gráficos
     curve_p_pos.setData(x_axis, buffers["P"]["pos"]); curve_p_sp_pos.setData(x_axis, buffers["P"]["sp_pos"])
@@ -212,10 +215,14 @@ def handle_serial_error(err_msg):
 
 # --- INICIALIZAÇÃO DA COMUNICAÇÃO ASSÍNCRONA TRABALHADORA ---
 serial_worker = SerialManager(port='/dev/ttyACM0', baudrate=921600)  # Operação a alta velocidade (Otimizado)
-serial_worker.data_received.connect(update_ui_with_real_data)
-serial_worker.error_occurred.connect(handle_serial_error)
+#serial_worker.data_received.connect(update_ui_with_real_data)
+#serial_worker.error_occurred.connect(handle_serial_error)
 serial_worker.log_data_received.connect(processar_pacote_log)
 serial_worker.start()
+
+render_timer = QTimer()
+render_timer.timeout.connect(update_and_render_gui)
+render_timer.start(33)
 
 # --- INSTANCIAÇÃO DOS EVENTOS DA INTERFACE (MÁQUINA QT) ---
 window.botao_dados.clicked.connect(toggle_recording)

@@ -4,7 +4,7 @@ from PySide6.QtCore import QThread, Signal
 
 class SerialManager(QThread):
     # Sinais para enviar dados limpos para a UI
-    data_received = Signal(dict)
+    #data_received = Signal(dict)
     log_data_received = Signal(list)
     error_occurred = Signal(str)
 
@@ -29,18 +29,18 @@ class SerialManager(QThread):
             print(f"Porta {self.port} aberta com sucesso. A aguardar dados...")
             
             while self.running:
-                if self.ser.in_waiting >= self.rx_size:
+                while self.ser.in_waiting >= self.rx_size:
                     header_bytes = self.ser.read(2)
                     header = struct.unpack("<H", header_bytes)[0]
                     
                     if header == 0xBBAA: # PACOTE: TELEMETRIA GRÁFICOS
                         payload = self.ser.read(44)
                         d = struct.unpack("<Iffffffffff", payload)
-                        telemetria = {
+                        self.latest_telemetry = {
                             "pitch": {"pos": d[1], "vel": d[2], "vq": d[3], "vd": d[4], "sp": d[5]},
                             "yaw":   {"pos": d[6], "vel": d[7], "vq": d[8], "vd": d[9], "sp": d[10]}
                         }
-                        self.data_received.emit(telemetria)
+                        #self.data_received.emit(telemetria)
 
                     elif header == 0xCCAA: # PACOTE: DADOS BLACKBOX
                         payload = self.ser.read(self.rx_size - 2)
@@ -69,7 +69,7 @@ class SerialManager(QThread):
                         # print(f"[ERRO ALINHAMENTO] Header lido: {hex(header)}")
                         self.ser.read(1)
                         
-                self.msleep(2)
+                self.msleep(1)
                 
         except Exception as e:
             self.error_occurred.emit(str(e))
@@ -77,6 +77,8 @@ class SerialManager(QThread):
             if self.ser and self.ser.is_open:
                 self.ser.close()
 
+    def get_latest_telemetry(self):
+        return self.latest_telemetry
 
                 
     def send_cmd(self, modo_id, malhafechada, cmd_gravar, kp_pitch, ki_pitch, kd_pitch, lpf_pitch, kp_yaw, ki_yaw, kd_yaw, lpf_yaw, setpoint_pitch, setpoint_yaw, freq_pitch, freq_yaw):
