@@ -1,0 +1,64 @@
+% Chapter 3
+
+\chapter{Controlo} % Main chapter title
+\label{chap:Chapter6} % For referencing the chapter elsewhere, use \ref{chap:Chapter3} 
+
+%----------------------------------------------------------------------------------------
+
+\textbf{Dar a introdução do controlo}
+
+\section{Objetivos}
+
+Para verificar a velocidade angular necessária é primeiro necessário determinar o tipo de alvos a seguir. Dado que o objetivo final é abater drones que queiram atacar infraestruturas criticas, isso quer dizer que o drone inimigo está a ir diretamente contra a insfraestrutura ou proximo disso. Dessa forma, pode-se propor uma velocidade ortogonal à visão do gimbal de 50 km/h (**shahed 136 - 185 km/h**) no máximo ou 13.9 m/s. Com esse dado é possível determinar a velocidade angular minima que o gimbal tem de apresentar para conseguir seguir o alvo.  Crinado um tringulo no trajéto efetuado pelo drone num segundo e o eixo do gimbal é possível chegar à seguinte velocidade angular: 
+
+$$
+\sin\left(\frac{\alpha}{2}\right) = \frac{\frac{13.9}{2}}{10} \implies \alpha \approx 1.537 \text{ rad}
+$$
+
+Desta forma, a velocidade angular necessária seria de 1.537 rad/s assumindo que o alvo está a apenas 10 metros do alvo.
+
+Estabeleceu-se como objetivo operacional a capacidade de seguir alvos a uma distância de 200 metros. Arbitrou-se que o feixe laser deve manter-se dentro de uma área de impacto com um raio máximo de $+/-$ 2,5 cm (correspondendo a um passo/erro total de 5 cm no alvo). Utilizando a relação trigonométrica para pequenos ângulos, onde a tangente do ângulo de desvio ($\alpha$) é a razão entre o erro linear tolerado e a distância ao alvo:
+
+$$\tan(\alpha) = \frac{0,025\text{ m}}{200\text{ m}}$$
+
+$$\alpha = \arctan(0,000125) \approx 0,0072^{\circ}$$
+
+Desta análise resulta que qualquer erro de apontamento superior a **$0,0072^{\circ}$** resultará na falha do alvo à distância estipulada. Dado o descrito resultou na seleção do encoder de 21 bits, que permite uma resolução teórica de aproximadamente **$0,00017^{\circ}$**. Ao comparar-se a resolução do encoder ($0,00017^{\circ}$) com o requisito de precisão ($0,007^{\circ}$), observa-se que o hardware selecionado oferece uma margem de erro cerca de 40 vezes superior à necessária, garantindo que mesmo com o ruído do sensor seja possível alcançar os requisitos pretendidos.
+
+\section{Malha de controlo}
+
+\textbf{introdução do pq disto}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width = \textwidth, keepaspectratio]{chapters/ch6_Controlo/assets/tese_controlo.pdf}
+\caption[A]{An }
+\label{fig:controlo}
+\end{figure}
+
+
+O ciclo de controlo inicia-se na função move, onde o setpoint de posição (definido pelo utilizador em radianos) é comparado com o feedback do encoder que passa primeiro por um filtro passa baixo obtendo assim o erro de posição.
+Este erro é multiplicado por um ganho proporcional de ângulo, sendo o resultado tratado como uma referência de velocidade. A este valor pode ser somada uma componente de feedforward de velocidade, caso o utilizador a defina. Antes de prosseguir, o sinal passa por um limitador que restringe a velocidade entre valores definidos. A velocidade de referência resultante é comparada com a velocidade real do motor, obtida através da derivada da posição do encoder e filtrada por um segundo filtro passa-baixo. O erro de velocidade daí resultante é processado por um controlador PID de velocidade, que encerra a execução da função move.
+A variável de atuação gerada pelo PID entra então na função FOC (Field Oriented Control). Inicialmente, o sinal passa por um limitador para respeitar as especificações físicas dos motores, sendo convertido numa tensão (V). Nesta fase, é possível somar uma tensão de feedforward arbitrária antes de o sinal ser enviado para os blocos de transformação. O controlo segue para as transformações inversas de Park e Clarke, que recebem três parâmetros fundamentais:
+- A tensão V de referência; 
+- A tensão D (normalmente mantida em zero para maximizar o binário); 
+- O ângulo elétrico, calculado através do produto da posição do encoder pelo número de polos do motor.
+
+As transformações convertem estas referências em ondas sinusoidais (ou outras, dependendo da modulação) para as fases A, B e C do motor trifásico. Por fim, estes sinais de controlo passam por um driver utilizando a potência da bateria para acionar o motor, completando assim o ciclo de controlo.
+
+\textbf{abordar ensaios diagrama de bode}
+\textbf{abordar como definir parametros PID}
+\textbf{colocar testes com PID novo?}
+
+\section{Resolução Real}
+
+\textbf{abordar como será o ensaio}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width = \textwidth, keepaspectratio]{chapters/ch6_Controlo/assets/Diatancia_teste_resolução.pdf}
+\caption[A]{An }
+\label{fig:dis}
+\end{figure}
+
+\textbf{apresentar resultados}
