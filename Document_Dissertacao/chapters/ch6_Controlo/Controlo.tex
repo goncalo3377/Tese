@@ -1,64 +1,155 @@
 % Chapter 3
 
-\chapter{Controlo} % Main chapter title
-\label{chap:Chapter6} % For referencing the chapter elsewhere, use \ref{chap:Chapter3} 
+\chapter{Controlo} % Título expandido mais formal
+\label{chap:Chapter6} 
+
+O presente capítulo é dedicado à implementação do sistema de controlo em malha fechada do \emph{gimbal}, elemento fulcral para garantir a estabilização e a exatidão do feixe \emph{laser} contra \acp{UAV}. Detalham-se os requisitos do sistema, a arquitetura algorítmica em cascata, o processo de identificação experimental em frequência, o controlador obtido e os ensaios dos mesmos.
 
 %----------------------------------------------------------------------------------------
 
-\textbf{Dar a introdução do controlo}
+\section{Requisitos}
+\label{sec:objetivos_controlo}
 
-\section{Objetivos}
+Para determinar os requisitos de velocidade e exatidão angular do sistema de controlo, torna-se necessário caracterizar previamente o perfil dinâmico dos alvos a seguir. Considerando que o sistema foi projetado para a proteção de infraestruturas críticas contra ameaças aéreas assimétricas, assume-se um cenário operacional onde o vetor inimigo executa uma trajetória de aproximação direta ou tangencial à estação de defesa. 
 
-Para verificar a velocidade angular necessária é primeiro necessário determinar o tipo de alvos a seguir. Dado que o objetivo final é abater drones que queiram atacar infraestruturas criticas, isso quer dizer que o drone inimigo está a ir diretamente contra a insfraestrutura ou proximo disso. Dessa forma, pode-se propor uma velocidade ortogonal à visão do gimbal de 50 km/h (**shahed 136 - 185 km/h**) no máximo ou 13.9 m/s. Com esse dado é possível determinar a velocidade angular minima que o gimbal tem de apresentar para conseguir seguir o alvo.  Crinado um tringulo no trajéto efetuado pelo drone num segundo e o eixo do gimbal é possível chegar à seguinte velocidade angular: 
-
-$$
-\sin\left(\frac{\alpha}{2}\right) = \frac{\frac{13.9}{2}}{10} \implies \alpha \approx 1.537 \text{ rad}
-$$
-
-Desta forma, a velocidade angular necessária seria de 1.537 rad/s assumindo que o alvo está a apenas 10 metros do alvo.
-
-Estabeleceu-se como objetivo operacional a capacidade de seguir alvos a uma distância de 200 metros. Arbitrou-se que o feixe laser deve manter-se dentro de uma área de impacto com um raio máximo de $+/-$ 2,5 cm (correspondendo a um passo/erro total de 5 cm no alvo). Utilizando a relação trigonométrica para pequenos ângulos, onde a tangente do ângulo de desvio ($\alpha$) é a razão entre o erro linear tolerado e a distância ao alvo:
-
-$$\tan(\alpha) = \frac{0,025\text{ m}}{200\text{ m}}$$
-
-$$\alpha = \arctan(0,000125) \approx 0,0072^{\circ}$$
-
-Desta análise resulta que qualquer erro de apontamento superior a **$0,0072^{\circ}$** resultará na falha do alvo à distância estipulada. Dado o descrito resultou na seleção do encoder de 21 bits, que permite uma resolução teórica de aproximadamente **$0,00017^{\circ}$**. Ao comparar-se a resolução do encoder ($0,00017^{\circ}$) com o requisito de precisão ($0,007^{\circ}$), observa-se que o hardware selecionado oferece uma margem de erro cerca de 40 vezes superior à necessária, garantindo que mesmo com o ruído do sensor seja possível alcançar os requisitos pretendidos.
-
-\section{Malha de controlo}
-
-\textbf{introdução do pq disto}
+Tomando como referência plataformas de ataque comuns, como o \ac{UAV} \emph{Shahed 136}, que apresenta uma velocidade de cruzeiro de $185~\text{km/h}$ \parencite{telegraph2024shahed}, estabeleceu-se como cenário de teste limite uma velocidade linear ortogonal à linha de vista do \emph{gimbal} de $50~\text{km/h}$ (equivalente a $13{,}9~\text{m/s}$). A partir destes dados, é possível calcular a velocidade angular mínima que os atuadores devem obter para assegurar o seguimento contínuo do alvo. Modelando geometricamente a trajetória descrita pelo \ac{UAV} no intervalo de um segundo através de um triângulo isósceles em relação ao eixo ótico do \emph{gimbal}, assim como expresso na Figura~\ref{fig:velocidade_angular} , a velocidade angular necessária ($\alpha$) é deduzida através da Equação~\ref{eq:velocidade_angular}:
 
 \begin{figure}[H]
-\centering
-\includegraphics[width = \textwidth, keepaspectratio]{chapters/ch6_Controlo/assets/tese_controlo.pdf}
-\caption[A]{An }
-\label{fig:controlo}
+    \centering
+    \includegraphics[width=0.5\textwidth, keepaspectratio]{chapters/ch6_Controlo/assets/velocidade_angular.pdf}
+    \caption[Ilustração de calculo]{Ilustração da Velocidade Mínima Necessária.}
+    \label{fig:velocidade_angular}
+\end{figure}
+
+\begin{equation}
+    \sin\left(\frac{\alpha}{2}\right) = \frac{\frac{13{,}9}{2}}{d} \implies \sin\left(\frac{\alpha}{2}\right) = \frac{6{,}95}{10} \implies \alpha \approx 1{,}537~\text{rad/s}
+    \label{eq:velocidade_angular}
+\end{equation}
+
+Desta análise resulta que a velocidade angular exigida aos motores é de $1{,}537~\text{rad/s}$ (aproximadamente $88^\circ/\text{s}$), assumindo criticamente que o alvo se encontra a uma distância focal curta de apenas $d = 10~\text{metros}$ da plataforma. À medida que a distância ao alvo aumenta, a exigência de velocidade angular decresce proporcionalmente, transferindo o desafio de controlo para o domínio da exatidão e resolução posicional.
+
+Paralelamente, estabeleceu-se como objetivo operacional a capacidade de manter o seguimento cinemático do alvo a uma distância de empenhamento de $200~\text{metros}$. Para que a neutralização eletrónica ou térmica seja eficaz, arbitrou-se que o feixe \emph{laser} deve manter-se confinado dentro de uma área de impacto com um raio máximo tolerado de $\pm 2{,}5~\text{cm}$ (o que corresponde a uma janela de erro total de $5~\text{cm}$ projetada sobre a superfície da ameaça), assim como ilustrado na Figura~\ref{fig:resolucao}. Utilizando a relação trigonométrica para pequenos ângulos, onde a tangente do desvio angular ($\Delta\theta$) é dada pela razão entre o erro linear admissível e a distância absoluta ao alvo, obtém-se:
+
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.9\textwidth, keepaspectratio]{chapters/ch6_Controlo/assets/resolução_max.png}
+    \caption[Resolução maxima]{Ilustração da Resolução Mínima Necessária.}
+    \label{fig:resolucao}
+\end{figure}
+
+\begin{equation}
+    \tan(\Delta\theta) = \frac{0{,}025~\text{m}}{200~\text{m}} = 0{,}000125 \implies \Delta\theta = \arctan(0{,}000125) \approx 0{,}0072^\circ
+    \label{eq:precisao_angular}
+\end{equation}
+
+Os resultados da Equação~\ref{eq:precisao_angular} demonstram que qualquer erro de seguimento em malha fechada superior a $0{,}0072^\circ$ inviabiliza a eficácia do sistema à distância estipulada. Este requisito estrito justificou a seleção dos \emph{encoders} magnéticos MT6835 de $21~\text{bits}$, os quais oferecem uma resolução angular teórica quantificada pela Equação~\ref{eq:resolucao_encoder}:
+
+\begin{equation}
+    \text{Resolução} = \frac{360^\circ}{2^{21}} \approx 0{,}000171^\circ
+    \label{eq:resolucao_encoder}
+\end{equation}
+
+Ao confrontar a resolução intrínseca do sensor ($0{,}00017^\circ$) com o requisito de precisão cinemática ($0{,}0072^\circ$), observa-se que o \emph{encoder} oferece uma resolução cerca de 40 vezes superior à estritamente necessária. Esta sobredimensão planeada garante que, mesmo na presença de ruído de leitura ou desalinhamentos mecânicos, a malha de controlo dispõe de informação sensorial com resolução suficiente para mitigar o erro e cumprir os objetivos de estabilização.
+
+%----------------------------------------------------------------------------------------
+
+\section{Arquitetura da Malha de Controlo}
+\label{sec:malha_controlo}
+
+Para que o \emph{gimbal} cumpra com eficácia a missão de neutralização de ameaças, o sistema de controlo deve satisfazer requisitos dinâmicos, tais como a garantia de um erro em regime permanente nulo face a entradas em rampa (seguimento de alvos a velocidade constante) e uma elevada capacidade de rejeição de perturbações externas. De modo a materializar estes objetivos, implementou-se uma arquitetura de controlo em malha fechada estruturada em cascata. Esta topologia é operacionalizada através da biblioteca \emph{SimpleFOC} para executar o \ac{FOC}, cujos fundamentos teóricos encontram-se detalhados no Enquadramento Teórico desta dissertação (Capítulo~\ref{ch:enquadramento_teorico}) \textbf{Devo descrever FOC no enquadramento teórico?}. O diagrama de blocos detalhado deste ciclo algorítmico encontra-se esquematizado na Figura~\ref{fig:diagrama_malha_controlo}.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=\textwidth, keepaspectratio]{chapters/ch6_Controlo/assets/tese_controlo.pdf}
+    \caption[Diagrama de Blocos do Algoritmo de Controlo em Cascata]{Diagrama de blocos do ciclo de controlo em cascata do algoritmo FOC via \emph{SimpleFOC}.}
+    \label{fig:diagrama_malha_controlo}
+\end{figure}
+
+O ciclo de controlo em tempo real é instanciado no microcontrolador ESP32-S3 de forma determinística, sendo dividido em duas rotinas principais, a função \emph{move()} e a função \emph{focloop()}. 
+
+A execução inicia-se na função \emph{move()}, responsável pelo controlo de posição de nível superior. Nesta rotina, o valor de referência (\emph{setpoint}) de posição angular é comparado com o sinal de realimentação de posição do \emph{encoder} magnético MT6835. Para mitigar o ruído de alta frequência inerente à leitura digital, este sinal de retorno atravessa previamente um filtro passa-baixas digital de primeira ordem, gerando o erro de posição angular do eixo. Este erro posicional é multiplicado por um ganho proporcional de ângulo, sendo o resultado tratado como a referência de velocidade angular para a malha interna. Antes de transitar para a etapa seguinte, o sinal passa por um bloco de saturação que restringe a velocidade dentro dos limites físicos de segurança do \emph{gimbal}. 
+
+A velocidade de referência resultante é então comparada com a velocidade real do motor, calculada no instante de amostragem através da diferenciação numérica da posição do \emph{encoder} e filtrada por um segundo filtro passa-baixas. O erro de velocidade daí resultante é processado por um controlador PID de velocidade, cujo sinal de saída encerra a execução da função.
+
+A variável de atuação gerada pelo PID de velocidade entra, subsequentemente, na rotina de controlo vetorial de baixo nível, a função \texttt{loopFOC()}. Inicialmente, o sinal passa por um limitador para respeitar as especificações elétricas e de tensão da bateria, sendo convertido na tensão de referência do eixo de quadratura ($V_q$), a qual está diretamente relacionada com o binário mecânico do motor.
+
+O bloco matemático da transformada inversa de \emph{Park} e de \emph{Clarke} recebe a tensão $V_q$, a tensão no eixo direto ($V_d$) e o ângulo elétrico ($\theta_e$) e transformam em sinais direcionados às fases $A$, $B$ e $C$ do estator. Por fim, os sinais de comando digital atuam o \emph{driver} de potência (ponte inversora trifásica), completando o ciclo de controlo em tempo real.
+
+%----------------------------------------------------------------------------------------
+
+\section{Modelação e Identificação Experimental em Frequência}
+\label{subsec:identificacao_frequencia}
+
+Para projetar os controladores PID de forma analítica e garantir o cumprimento dos requisitos de estabilidade e seguimento, torna-se imperativo conhecer o modelo matemático que rege a dinâmica física de cada eixo do \emph{gimbal}. Para tal, optou-se por uma abordagem de modelação experimental baseada na resposta em frequência do sistema.
+
+O método de identidade consistiu na realização de um varrimento de frequências. Utilizando o controlo de tensão da biblioteca \emph{SimpleFOC}, injetou-se um sinal de excitação sinusoidal contínuo na entrada de tensão de quadratura ($V_q$), com uma amplitude controlada, varrendo um espetro desde frequências baixas até ao limite da largura de banda do atuador. Em cada patamar de frequência, a resposta do motor foi monitorizada em tempo real através do \emph{encoder} magnético MT6835.
+
+A partir da relação entre o sinal de excitação (entrada) e a resposta dinâmica do sistema (saída), procedeu-se ao levantamento do Diagrama de Bode. A análise gráfica deste comportamento experimental permitiu aproximar a dinâmica do eixo a uma Função de Transferência, $G(s)$, definida genericamente no domínio de Laplace pela Equação~\ref{eq:funcao_transferencia}:
+
+\begin{equation}
+    G(s) = \frac{\Theta(s)}{V_q(s)} = \frac{K}{s(\tau s + 1)} = \frac{K}{s^2\tau + s}
+    \label{eq:funcao_transferencia}
+\end{equation}
+
+Onde $K$ representa o ganho estático do sistema e $\tau$ corresponde à constante de tempo mecânica, diretamente associada à relação entre a inércia e o amortecimento do eixo ($\tau = J/B$). A presença do integrador puro na Equação~\ref{eq:funcao_transferencia} reflete a transição natural da malha de velocidade para a malha de posição angular.
+
+De forma a caracterizar individualmente a resposta dinâmica de cada canal de atuação do \emph{gimbal}, o procedimento de varrimento de frequências foi executado de forma independente para o eixo de elevação (\emph{pitch}) e para o eixo de azimute (\emph{yaw}). Os diagramas de Bode obtidos experimentalmente encontram-se representados na Figura~\ref{fig:bode_identificacao_eixos}.
+
+\begin{figure}[H]
+    \centering
+    % Subfigura Esquerda - Pitch
+    \begin{subfigure}[b]{0.48\textwidth}
+        \centering
+        \includegraphics[width=\textwidth,keepaspectratio]{chapters/ch6_Controlo/assets/diagrama_bode_pitch.pdf}
+        \caption{Eixo de \emph{Pitch}.}
+        \label{fig:sub_bode_pitch}
+    \end{subfigure}\hfill
+    % Subfigura Direita - Yaw
+    \begin{subfigure}[b]{0.48\textwidth}
+        \centering
+        \includegraphics[width=\textwidth,keepaspectratio]{chapters/ch6_Controlo/assets/diagrama_bode_yaw.pdf}
+        \caption{Eixo de \emph{Yaw}.}
+        \label{fig:sub_bode_yaw}
+    \end{subfigure}
+    \caption[Diagramas de Bode Experimentais por Eixo]{Diagramas de Bode experimentais.}
+    \label{fig:bode_identificacao_eixos}
 \end{figure}
 
 
-O ciclo de controlo inicia-se na função move, onde o setpoint de posição (definido pelo utilizador em radianos) é comparado com o feedback do encoder que passa primeiro por um filtro passa baixo obtendo assim o erro de posição.
-Este erro é multiplicado por um ganho proporcional de ângulo, sendo o resultado tratado como uma referência de velocidade. A este valor pode ser somada uma componente de feedforward de velocidade, caso o utilizador a defina. Antes de prosseguir, o sinal passa por um limitador que restringe a velocidade entre valores definidos. A velocidade de referência resultante é comparada com a velocidade real do motor, obtida através da derivada da posição do encoder e filtrada por um segundo filtro passa-baixo. O erro de velocidade daí resultante é processado por um controlador PID de velocidade, que encerra a execução da função move.
-A variável de atuação gerada pelo PID entra então na função FOC (Field Oriented Control). Inicialmente, o sinal passa por um limitador para respeitar as especificações físicas dos motores, sendo convertido numa tensão (V). Nesta fase, é possível somar uma tensão de feedforward arbitrária antes de o sinal ser enviado para os blocos de transformação. O controlo segue para as transformações inversas de Park e Clarke, que recebem três parâmetros fundamentais:
-- A tensão V de referência; 
-- A tensão D (normalmente mantida em zero para maximizar o binário); 
-- O ângulo elétrico, calculado através do produto da posição do encoder pelo número de polos do motor.
+\textbf{Restante secção...}
+%\begin{equation}
+%    G_{pitch}(s) = \frac{\Theta_{pitch}(s)}{V_q(s)} = \frac{K}{s^2 + \frac{1}{\tau}s} =\frac{0.0}{s^2 + 0.0s}
+%    \label{eq:tf_pitch}
+%\end{equation}
 
-As transformações convertem estas referências em ondas sinusoidais (ou outras, dependendo da modulação) para as fases A, B e C do motor trifásico. Por fim, estes sinais de controlo passam por um driver utilizando a potência da bateria para acionar o motor, completando assim o ciclo de controlo.
+%----------------------------------------------------------------------------------------
 
-\textbf{abordar ensaios diagrama de bode}
-\textbf{abordar como definir parametros PID}
-\textbf{colocar testes com PID novo?}
+\section{Ensaios Experimentais do Controlador}
+\label{sec:ensaios_pid}
 
-\section{Resolução Real}
+%Com base nas funções de transferência experimentais obtidas na secção anterior, procedeu-se ao cálculo analítico dos parâmetros do controlador PID em cascata para ambos os eixos (\emph{pitch} e \emph{yaw}). Esta secção detalha a validação prática do comportamento dinâmico do sistema em bancada de ensaios.
 
-\textbf{abordar como será o ensaio}
+\subsection{Resposta ao Degrau (Step Response)}
+\label{subsec:resposta_degrau}
+% Aqui deves descrever o ensaio de resposta a uma mudança abrupta de posição.
+% Analisa graficamente os parâmetros: Overshoot (sobre-sinal), Rise Time (tempo de subida) e Settling Time (tempo de estabelecimento).
+
+\subsection{Seguimento de Trajetória Dinâmica (Onda Triangular)}
+\label{subsec:onda_triangular}
+% Aqui deves descrever o ensaio com a onda triangular.
+% Explica que a onda triangular mimetiza um alvo a mover-se com velocidade angular constante (entrada em rampa)
+% e demonstra como o controlador lida com o erro em rampa e com as inversões abruptas de sentido de rotação.
+
+\subsection{Resolução Máxima Experimental}
+\label{subsec:resolucao_maxima}
+\textbf{Posso deixar aqui? ou não faz sentido abordar o ensaio da resolução aqui?}
+% Aqui deves apresentar os resultados do teste limite de resolução.
+% Qual foi o menor degrau angular (em frações de grau ou radianos) que o gimbal conseguiu detetar, processar e corrigir de forma estável, validando o uso do encoder de 21 bits.
 
 \begin{figure}[H]
 \centering
-\includegraphics[width = \textwidth, keepaspectratio]{chapters/ch6_Controlo/assets/Diatancia_teste_resolução.pdf}
+\includegraphics[width = 0.5\textwidth, keepaspectratio]{chapters/ch6_Controlo/assets/distancia_ensaio_laser.png}
 \caption[A]{An }
 \label{fig:dis}
 \end{figure}
-
-\textbf{apresentar resultados}

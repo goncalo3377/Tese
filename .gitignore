@@ -4,3 +4,9 @@ deteção/gravacao*
 deteção/resultado_*
 deteção/
 Plano de dissertação/
+*.aux
+*.fdb_latexmk
+*.fls
+repmus/*.log
+*.out
+*.synctex.gz
