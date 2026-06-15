@@ -1,0 +1,106 @@
+\documentclass[11pt,a4paper]{article}
+
+% --- Pacotes Fundamentais de Codificação e Idioma ---
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[english]{babel} 
+\usepackage{lmodern}
+
+% --- Geometria da Página ---
+\usepackage{geometry}
+\geometry{
+    a4paper,
+    top=3.0cm,
+    bottom=3.0cm,
+    left=2.5cm,
+    right=2.5cm,
+    headheight=14pt,
+    footskip=1.5cm
+}
+
+% --- Pacotes Gráficos, Cores e Tipografia ---
+\usepackage{graphicx}
+\usepackage{xcolor}
+\usepackage{microtype} 
+
+% Definição de Cores Profissionais
+\definecolor{NavalBlue}{RGB}{0, 32, 91}       
+\definecolor{SlateGray}{RGB}{112, 128, 144}   
+\definecolor{LightGray}{RGB}{245, 245, 247}   
+
+% --- Configuração de Cabeçalhos e Rodapés (fancyhdr) ---
+%\usepackage{fancyhdr}
+%\pagestyle{fancy}
+%\fancyhf{} 
+%\lhead{\small\textcolor{SlateGray}{System Overview Brief --- Drone Defense Gimbal}}
+%\rhead{\small\textcolor{SlateGray}{\thepage}}
+%\renewcommand{\headrulewidth}{0.4pt}
+%\renewcommand{\headrule}{\hbox to\headwidth{\color{SlateGray}\leaders\hrule height \headrulewidth\hfill}}
+
+% --- Customização de Títulos de Secções (titlesec) ---
+\usepackage{titlesec}
+\titleformat{\section}
+  {\color{NavalBlue}\normalfont\large\bfseries}
+  {\thesection.}{0.5em}{}[{\color{NavalBlue}\titlerule[0.8pt]}]
+\titleformat{\subsection}
+  {\color{NavalBlue}\normalfont\normalsize\bfseries}
+  {\thesubsection}{0.5em}{}
+
+% --- Outros Pacotes Auxiliares ---
+\usepackage{booktabs} 
+\usepackage{amsmath}  
+\usepackage{enumitem} 
+\setlist[itemize]{topsep=2pt, parsep=2pt, itemsep=2pt} 
+\usepackage[colorlinks=true, urlcolor=NavalBlue, linkcolor=NavalBlue]{hyperref}
+
+% --- Dados do Documento ---
+\begin{document}
+
+% --- Cabeçalho de Título Executivo ---
+\begin{center}
+    \phantom{} \\
+    \vspace{-1.5cm}
+    %{\scshape\large\color{SlateGray} Portuguese Naval School --- Escola Naval} \\
+    \vspace{0.2cm}
+    {\LARGE\bfseries\color{NavalBlue} System Overview Brief: Autonomous Drone Defense Gimbal} \\
+    \vspace{0.3cm}
+    {\color{SlateGray}\hrule height 1.5pt} 
+    \vspace{0.3cm}
+    \begin{tabular}{p{0.45\textwidth}r}
+        \textbf{Author:} Gonçalo Silva Ribeiro & \textbf{Framework:} Master's Thesis \\
+        \textbf{Institution:} Portuguese Naval Academy
+    \end{tabular}
+    \vspace{0.2cm}
+    {\color{SlateGray}\hrule height 0.5pt} 
+\end{center}
+
+\vspace{0.5cm}
+
+% --- Secção 1 ---
+\section{General System Description}
+The developed system consists of a two-axis robotic gimbal platform (yaw and pitch), designed entirely from scratch. The primary objective of the system, is to perform real-time autonomous detection, automatic kinematic tracking, and precise pointing of a laser beam against Unmanned Aerial Vehicles (UAVs / drones) in tactical defense scenarios.
+
+The architecture was optimized to combine an exceptionally high angular resolution and mechanical stability, with a low-cost development philosophy, leveraging additive manufacturing and high-performance commercial-off-the-shelf electronic components.
+
+% --- Secção 2 ---
+\section{Hardware Architecture and Instrumentation}
+The physical ecosystem of the device, is divided into three main pillars:
+
+\begin{itemize}[label=\textcolor{NavalBlue}{\small$\bullet$}, leftmargin=0.5cm] % Correção do símbolo aqui (\bullet)
+    \item \textbf{Modular Mechanical Structure:} Designed using \emph{Blender} software and manufactured via Fused Deposition Modeling (FDM) additive manufacturing using PLA polymer. It comprises a stationary Base, a tripartite Central Structure (azimuth arm), and a Pitch Axis featuring a dual-support configuration to dissipate mechanical stresses and protect the motor from direct radial forces.
+    \item \textbf{High-Resolution Actuators (BLDC Motors):} The system utilizes two outrunner Brushless DC (BLDC) motors to ensure continuous, fluid, and highly accurate control over both the pitch and yaw axes.
+    \item \textbf{Sensory Feedback Loop:} Both axes are equipped with MT6835 magnetic angular position encoders.
+\end{itemize}
+
+% --- Secção 3 ---
+\section{Computational Topology and Processing Line}
+To guarantee deterministic real-time operation without critical latencies, the system adopts a distributed computing topology split into four sequential logical stages:
+
+\begin{enumerate}[leftmargin=0.5cm]
+    \item \textbf{Image Capture:} A dedicated digital camera, mechanically aligned and solidary with the optical axis of the system, performs continuous frame capture. This video interface is managed natively by a Raspberry Pi single-board computer.
+    \item \textbf{Artificial Intelligence Inference:} The raw video stream is transmitted from the Raspberry Pi, to a high-capacity Computing Station (Central PC). This computer runs a deep learning model optimized, to detect the incoming UAV and generate a target bounding box.
+    \item \textbf{Pointing Error Calculation:} The Central PC calculates the two-dimensional pixel deviation $(X, Y)$ between the center of the target's bounding box and the central laser aiming coordinate. This error vector is sent back to the Raspberry Pi, which immediately forwards it to the low-level controller.
+    \item \textbf{Dynamic Control and Actuation:} A real-time microcontroller receives the positional error data, computes the dynamic control, and generates the appropriate signals for the power drivers. These modules regulate the electrical energy injected into the phases of the BLDC motors, correcting the gimbal's attitude to neutralize the positional deviation and guarantee a continuous, stable laser lock on the detected threat.
+\end{enumerate}
+
+\end{document}
