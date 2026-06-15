@@ -3,7 +3,7 @@ import csv
 import time
 import pyqtgraph as pg
 from pyqtgraph import PlotWidget
-from PySide6.QtWidgets import QApplication
+from PySide6.QtWidgets import QApplication, QFileDialog
 from PySide6.QtCore import QFile, Slot, Qt, QTimer
 from PySide6.QtUiTools import QUiLoader
 from communication import SerialManager
@@ -31,7 +31,7 @@ window.widget_velocidade_Yaw.setLabel('left', 'Velocidade', units='rad/s')
 window.widget_tensaoq_Yaw.setLabel('left', 'Tensão Q', units='V')
 
 # --- CONFIGURAÇÃO DOS BUFFERS DE DADOS ---
-n_amostras = 100
+n_amostras = 500
 x_axis = list(range(n_amostras))
 buffers = {
     "P": {"pos": [0]*n_amostras, "vel": [0]*n_amostras, "vq": [0]*n_amostras, "sp_pos": [0]*n_amostras, "sp_vel": [0]*n_amostras, "sp_vq": [0]*n_amostras},
@@ -68,7 +68,6 @@ window.widget_tensaoq_Yaw.setBackground('#262829')
 curve_y_vq = window.widget_tensaoq_Yaw.plot(pen='g', width=2)
 curve_y_sp_vq = window.widget_tensaoq_Yaw.plot(pen=pg.mkPen('#00ffcc', width=1.5, style=Qt.DashLine))
 
-# --- REFEITORADO: ATUALIZAÇÃO FLUIDA DA INTERFACE (SINAL REAL-TIME) ---
 
 def update_and_render_gui():
     global modo_enviado
@@ -76,36 +75,44 @@ def update_and_render_gui():
     telemetria = serial_worker.get_latest_telemetry()
     
     if telemetria is not None:
+        sub_m = window.comboBox_multi.currentText().lower() if hasattr(window, 'comboBox_multi') else ""
+        
+        # MODIFICADO: Inclui "Seno", "Quadrada" e "Triangular" na verificação de alvos gráficos
+        is_onda = "Seno" in modo_enviado or "Quadrada" in modo_enviado or "Triangular" in modo_enviado
+        is_pos = "Posição" in modo_enviado or (is_onda and "posição" in sub_m)
+        is_vel = "Velocidade" in modo_enviado or (is_onda and "velocidade" in sub_m)
+        is_vq  = is_onda and ("tensão" in sub_m or sub_m == "")
+
         for k, eixo in [("pitch", "P"), ("yaw", "Y")]:
             t = telemetria[k]
             buffers[eixo]["pos"] = buffers[eixo]["pos"][1:] + [t["pos"]]
             buffers[eixo]["vel"] = buffers[eixo]["vel"][1:] + [t["vel"]]
             buffers[eixo]["vq"]  = buffers[eixo]["vq"][1:]  + [t["vq"]]
             
-            # Alinhamento automático do setpoint conforme a grandeza física sob teste
-            buffers[eixo]["sp_pos"] = buffers[eixo]["sp_pos"][1:] + [t["sp"] if "Posição" in modo_enviado else 0.0]
-            buffers[eixo]["sp_vel"] = buffers[eixo]["sp_vel"][1:] + [t["sp"] if "Velocidade" in modo_enviado else 0.0]
-            buffers[eixo]["sp_vq"]  = buffers[eixo]["sp_vq"][1:]  + [t["sp"] if ("Seno" in modo_enviado or "Quadrada" in modo_enviado) else 0.0]
+            buffers[eixo]["sp_pos"] = buffers[eixo]["sp_pos"][1:] + [t["sp"] if is_pos else 0.0]
+            buffers[eixo]["sp_vel"] = buffers[eixo]["sp_vel"][1:] + [t["sp"] if is_vel else 0.0]
+            buffers[eixo]["sp_vq"]  = buffers[eixo]["sp_vq"][1:]  + [t["sp"] if is_vq else 0.0]
 
-    # Atualização de ecrãs de gráficos
-    curve_p_pos.setData(x_axis, buffers["P"]["pos"]); curve_p_sp_pos.setData(x_axis, buffers["P"]["sp_pos"])
-    curve_p_vel.setData(x_axis, buffers["P"]["vel"]); curve_p_sp_vel.setData(x_axis, buffers["P"]["sp_vel"])
-    curve_p_vq.setData(x_axis, buffers["P"]["vq"]);   curve_p_sp_vq.setData(x_axis, buffers["P"]["sp_vq"])
-    
-    curve_y_pos.setData(x_axis, buffers["Y"]["pos"]); curve_y_sp_pos.setData(x_axis, buffers["Y"]["sp_pos"])
-    curve_y_vel.setData(x_axis, buffers["Y"]["vel"]); curve_y_sp_vel.setData(x_axis, buffers["Y"]["sp_vel"])
-    curve_y_vq.setData(x_axis, buffers["Y"]["vq"]);   curve_y_sp_vq.setData(x_axis, buffers["Y"]["sp_vq"])
+        # CORREÇÃO CRÍTICA DE INDENTAÇÃO: Colocado dentro do bloco 'if telemetria is not None'
+        # Atualização de ecrãs de gráficos
+        curve_p_pos.setData(x_axis, buffers["P"]["pos"]); curve_p_sp_pos.setData(x_axis, buffers["P"]["sp_pos"])
+        curve_p_vel.setData(x_axis, buffers["P"]["vel"]); curve_p_sp_vel.setData(x_axis, buffers["P"]["sp_vel"])
+        curve_p_vq.setData(x_axis, buffers["P"]["vq"]);   curve_p_sp_vq.setData(x_axis, buffers["P"]["sp_vq"])
+        
+        curve_y_pos.setData(x_axis, buffers["Y"]["pos"]); curve_y_sp_pos.setData(x_axis, buffers["Y"]["sp_pos"])
+        curve_y_vel.setData(x_axis, buffers["Y"]["vel"]); curve_y_sp_vel.setData(x_axis, buffers["Y"]["sp_vel"])
+        curve_y_vq.setData(x_axis, buffers["Y"]["vq"]);   curve_y_sp_vq.setData(x_axis, buffers["Y"]["sp_vq"])
 
-    # Atualização de Displays Digitais Independentes (Pitch / Yaw)
-    if hasattr(window, 'label_Posicao_Pitch'): window.label_Posicao_Pitch.setText(f"{telemetria['pitch']['pos']:.2f}")
-    if hasattr(window, 'label_Velocidade_Pitch'): window.label_Velocidade_Pitch.setText(f"{telemetria['pitch']['vel']:.2f}")
-    if hasattr(window, 'label_tensao_q_Pitch'): window.label_tensao_q_Pitch.setText(f"{telemetria['pitch']['vq']:.2f}")
-    if hasattr(window, 'label_tensao_d_Pitch'): window.label_tensao_d_Pitch.setText(f"{telemetria['pitch']['vd']:.2f}")
+        # Atualização de Displays Digitais Independentes (Pitch / Yaw)
+        if hasattr(window, 'label_Posicao_Pitch'): window.label_Posicao_Pitch.setText(f"{telemetria['pitch']['pos']:.2f}")
+        if hasattr(window, 'label_Velocidade_Pitch'): window.label_Velocidade_Pitch.setText(f"{telemetria['pitch']['vel']:.2f}")
+        if hasattr(window, 'label_tensao_q_Pitch'): window.label_tensao_q_Pitch.setText(f"{telemetria['pitch']['vq']:.2f}")
+        if hasattr(window, 'label_tensao_d_Pitch'): window.label_tensao_d_Pitch.setText(f"{telemetria['pitch']['vd']:.2f}")
 
-    if hasattr(window, 'label_Posicao_Yaw'): window.label_Posicao_Yaw.setText(f"{telemetria['yaw']['pos']:.2f}")
-    if hasattr(window, 'label_Velocidade_Yaw'): window.label_Velocidade_Yaw.setText(f"{telemetria['yaw']['vel']:.2f}")
-    if hasattr(window, 'label_tensao_q_Yaw'): window.label_tensao_q_Yaw.setText(f"{telemetria['yaw']['vq']:.2f}")
-    if hasattr(window, 'label_tensao_d_Yaw'): window.label_tensao_d_Yaw.setText(f"{telemetria['yaw']['vd']:.2f}")
+        if hasattr(window, 'label_Posicao_Yaw'): window.label_Posicao_Yaw.setText(f"{telemetria['yaw']['pos']:.2f}")
+        if hasattr(window, 'label_Velocidade_Yaw'): window.label_Velocidade_Yaw.setText(f"{telemetria['yaw']['vel']:.2f}")
+        if hasattr(window, 'label_tensao_q_Yaw'): window.label_tensao_q_Yaw.setText(f"{telemetria['yaw']['vq']:.2f}")
+        if hasattr(window, 'label_tensao_d_Yaw'): window.label_tensao_d_Yaw.setText(f"{telemetria['yaw']['vd']:.2f}")
 
 
 # --- ENVIO COMPACTO DE PARÂMETROS ---
@@ -121,10 +128,21 @@ def enviar_parametros_esp32():
     amp_yaw = window.doubleSpinBox_amplitude_Yaw.value() if hasattr(window, 'doubleSpinBox_amplitude_Yaw') else 0.0
     freq_yaw = window.doubleSpinBox_frequencia_Yaw.value() if hasattr(window, 'doubleSpinBox_frequencia_Yaw') else 0.0
 
-    modo_id = 1 if "Seno" in modo_texto else 2 if "Quadrada" in modo_texto else 3 if "Posição" in modo_texto else 4
-    setpoint_Pitch = amp_pitch if modo_id in [1,2] else window.doubleSpinBox_pos_veloc_Pitch.value()
-    setpoint_Yaw = amp_yaw if modo_id in [1,2] else window.doubleSpinBox_pos_veloc_Yaw.value()
-
+    # MODIFICADO: Atribuído modo_id=1 para Seno, 2 para Quadrada, 5 para Triangular (ajusta no teu cpp se necessário)
+    if "Seno" in modo_texto: modo_id = 1
+    elif "Quadrada" in modo_texto: modo_id = 2
+    elif "Triangular" in modo_texto: modo_id = 5 
+    elif "Posição" in modo_texto: modo_id = 3
+    else: modo_id = 4
+    
+    sub_modo = 0 # 0 = Tensão (Padrão)
+    if modo_id in [1, 2, 5] and hasattr(window, 'comboBox_multi'):
+        sub_texto = window.comboBox_multi.currentText().lower()
+        if "posição" in sub_texto: sub_modo = 1
+        elif "velocidade" in sub_texto: sub_modo = 2
+    
+    setpoint_Pitch = amp_pitch if modo_id in [1, 2, 5] else window.doubleSpinBox_pos_veloc_Pitch.value()
+    setpoint_Yaw = amp_yaw if modo_id in [1, 2, 5] else window.doubleSpinBox_pos_veloc_Yaw.value()
 
     # Leitura dinâmica dos ganhos PID
     kp_pitch = window.doubleSpinBox_Pitch_Kp.value() if hasattr(window, 'doubleSpinBox_Pitch_Kp') else 0.0
@@ -140,8 +158,8 @@ def enviar_parametros_esp32():
 
     malhafechada = window.checkBox_loop.isChecked()
     
-    # Transmissão do frame binário de 53 bytes rumo ao microcontrolador
-    serial_worker.send_cmd(modo_id, malhafechada, cmd_gravar_global, kp_pitch, ki_pitch, kd_pitch, lpf_pitch, kp_yaw, ki_yaw, kd_yaw, lpf_yaw, setpoint_Pitch, setpoint_Yaw, freq_pitch, freq_yaw)
+    # Transmissão do frame binário atualizado rumo ao microcontrolador
+    serial_worker.send_cmd(modo_id, malhafechada, cmd_gravar_global, sub_modo, kp_pitch, ki_pitch, kd_pitch, lpf_pitch, kp_yaw, ki_yaw, kd_yaw, lpf_yaw, setpoint_Pitch, setpoint_Yaw, freq_pitch, freq_yaw)
 
 
 # --- PROCESSAMENTO EXCLUSIVO DA BLACKBOX (DESCARGA COMPLETA) ---
@@ -182,7 +200,23 @@ def toggle_recording():
 def save_to_csv():
     global recorded_data
     if not recorded_data: return
-    filename = f"./App debug/ensaio_motor_{int(time.time())}.csv"
+    
+    # Gerar uma sugestão de nome padrão baseada no timestamp atual
+    sugestao_nome = f"./App debug/ensaio_motor_onda_{int(time.time())}.csv"
+    
+    # --- NOVA JANELA NATIVA PARA ESCOLHER O NOME E DIRETÓRIO ---
+    filename, _ = QFileDialog.getSaveFileName(
+        window,
+        "Guardar Ensaio do Gimbal",
+        sugestao_nome,
+        "Ficheiros CSV (*.csv)"
+    )
+    
+    # Se o utilizador fechar a janela ou clicar em "Cancelar", aborta o salvamento
+    if not filename:
+        print("Exportação cancelada pelo utilizador. Os dados não foram guardados.")
+        return
+
     try:
         with open(filename, 'w', newline='') as f:
             writer = csv.writer(f)
@@ -205,18 +239,30 @@ def atualizar_lpf_yaw(valor_inteiro):
 def alterar_modo_sinal():
     m = window.comboBox_setpoint.currentText()
     vis_pos_vel = "Posição" in m or "Velocidade" in m
+    window.lbl_posicao_velocidade_Pitch.setVisible(vis_pos_vel); window.lbl_posicao_velocidade_Yaw.setVisible(vis_pos_vel)
     window.doubleSpinBox_pos_veloc_Pitch.setVisible(vis_pos_vel); window.doubleSpinBox_pos_veloc_Yaw.setVisible(vis_pos_vel)
     window.doubleSpinBox_frequencia_Pitch.setVisible(not vis_pos_vel); window.doubleSpinBox_amplitude_Pitch.setVisible(not vis_pos_vel)
     window.doubleSpinBox_frequencia_Yaw.setVisible(not vis_pos_vel); window.doubleSpinBox_amplitude_Yaw.setVisible(not vis_pos_vel)
+    window.lbl_frequencia_Pitch.setVisible(not vis_pos_vel); window.lbl_frequencia_Yaw.setVisible(not vis_pos_vel); 
+    window.lbl_amplitude_Pitch.setVisible(not vis_pos_vel); window.lbl_amplitude_Yaw.setVisible(not vis_pos_vel); 
 
-def handle_serial_error(err_msg):
-    print(f"ERRO SÉRIAL: {err_msg}")
+    # MODIFICADO: Condição expandida para aceitar as três geometrias de onda periódica
+    is_onda = "Seno" in m or "Quadrada" in m or "Triangular" in m
+    if hasattr(window, 'comboBox_multi'):
+        window.comboBox_multi.setVisible(is_onda)
+        
+    if vis_pos_vel:
+        window.checkBox_loop.setVisible(True)
+    elif is_onda and hasattr(window, 'comboBox_multi'):
+        sub_m = window.comboBox_multi.currentText().lower()
+        # Mostra a checkbox de malha apenas se a onda estiver a atuar em posição ou velocidade
+        window.checkBox_loop.setVisible("posição" in sub_m or "velocidade" in sub_m)
+    else:
+        window.checkBox_loop.setVisible(False)
 
 
 # --- INICIALIZAÇÃO DA COMUNICAÇÃO ASSÍNCRONA TRABALHADORA ---
-serial_worker = SerialManager(port='/dev/ttyACM0', baudrate=921600)  # Operação a alta velocidade (Otimizado)
-#serial_worker.data_received.connect(update_ui_with_real_data)
-#serial_worker.error_occurred.connect(handle_serial_error)
+serial_worker = SerialManager(port='/dev/ttyACM0', baudrate=921600)  # Operação a alta velocidade
 serial_worker.log_data_received.connect(processar_pacote_log)
 serial_worker.start()
 
@@ -230,6 +276,8 @@ window.comboBox_setpoint.currentIndexChanged.connect(alterar_modo_sinal)
 window.horizontalScrollBar_LPF_Pitch.valueChanged.connect(atualizar_lpf_pitch)
 window.horizontalScrollBar_LPF_Yaw.valueChanged.connect(atualizar_lpf_yaw)
 
+if hasattr(window, 'comboBox_multi'):
+    window.comboBox_multi.currentIndexChanged.connect(alterar_modo_sinal)
 if hasattr(window, 'pushButton_enviar'):
     window.pushButton_enviar.clicked.connect(enviar_parametros_esp32)
 if hasattr(window, 'pushButton_aplicar'):

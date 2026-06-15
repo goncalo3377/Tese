@@ -16,7 +16,7 @@ class SerialManager(QThread):
         self.ser = None
         self.rx_size = 46 # 2 header + 4 ts + 10 floats * 4 = 46 bytes
         # --- ESTRUTURA DE ENVIO (Comandos para o ESP32) ---
-        self.tx_format = "<H B ? B ffffffffffff"
+        self.tx_format = "<H B ? B B ffffffffffff"
 
         self.latest_telemetry = None
 
@@ -81,11 +81,11 @@ class SerialManager(QThread):
         return self.latest_telemetry
 
                 
-    def send_cmd(self, modo_id, malhafechada, cmd_gravar, kp_pitch, ki_pitch, kd_pitch, lpf_pitch, kp_yaw, ki_yaw, kd_yaw, lpf_yaw, setpoint_pitch, setpoint_yaw, freq_pitch, freq_yaw):
+    def send_cmd(self, modo_id, malhafechada, cmd_gravar, sub_modo,kp_pitch, ki_pitch, kd_pitch, lpf_pitch, kp_yaw, ki_yaw, kd_yaw, lpf_yaw, setpoint_pitch, setpoint_yaw, freq_pitch, freq_yaw):
         if self.ser and self.ser.is_open:
             try:
                 cmd_header = 0xDDCC
-                packet = struct.pack(self.tx_format, cmd_header, modo_id, malhafechada, cmd_gravar, kp_pitch, ki_pitch, kd_pitch, lpf_pitch, kp_yaw, ki_yaw, kd_yaw, lpf_yaw, setpoint_pitch, setpoint_yaw, freq_pitch, freq_yaw)
+                packet = struct.pack(self.tx_format, cmd_header, modo_id, malhafechada, cmd_gravar, sub_modo, kp_pitch, ki_pitch, kd_pitch, lpf_pitch, kp_yaw, ki_yaw, kd_yaw, lpf_yaw, setpoint_pitch, setpoint_yaw, freq_pitch, freq_yaw)
                 self.ser.write(packet)
             except Exception as e:
                 self.error_occurred.emit(f"Falha ao enviar comando: {e}")
