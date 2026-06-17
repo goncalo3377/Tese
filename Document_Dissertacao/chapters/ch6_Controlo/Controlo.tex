@@ -92,7 +92,7 @@ A partir da relação entre o sinal de excitação (entrada) e a resposta dinâm
     \label{eq:funcao_transferencia}
 \end{equation}
 
-Onde $K$ representa o ganho estático do sistema e $\tau$ corresponde à constante de tempo mecânica, diretamente associada à relação entre a inércia e o amortecimento do eixo ($\tau = J/B$). A presença do integrador puro na Equação~\ref{eq:funcao_transferencia} reflete a transição natural da malha de velocidade para a malha de posição angular.
+Onde $K$ representa o ganho estático do sistema e $\tau$ corresponde à constante de tempo mecânica. A presença do integrador puro na Equação~\ref{eq:funcao_transferencia} reflete a integração da posição de forma naturar por estár a atuar na tensão que é diretamente proporcional à velocidade.
 
 De forma a caracterizar individualmente a resposta dinâmica de cada canal de atuação do \emph{gimbal}, o procedimento de varrimento de frequências foi executado de forma independente para o eixo de elevação (\emph{pitch}) e para o eixo de azimute (\emph{yaw}). Os diagramas de Bode obtidos experimentalmente encontram-se representados na Figura~\ref{fig:bode_identificacao_eixos}.
 
@@ -116,8 +116,18 @@ De forma a caracterizar individualmente a resposta dinâmica de cada canal de at
     \label{fig:bode_identificacao_eixos}
 \end{figure}
 
+\textbf{
+Abordar o pq de ser feito nestas frequencias e o pq de apresentar resultados maus a alta frequencia.}
 
-\textbf{Restante secção...}
+\textbf{falar sobre os resultados referindo que começão a 90/270 dado ter um polo na origem e um polo mecânico (n sei se abordo o polo elétrico que é dificil medir)}
+
+\textbf{abordar a função de transferencia retirada de cada diagrama de bode}
+
+\textbf{utilizou se a ferramenta PIDturner disponibilizada pelo MATLAB para determinar os parametros do PI-DF} \textbf{PI-DF, onde abordar}
+
+
+
+
 %\begin{equation}
 %    G_{pitch}(s) = \frac{\Theta_{pitch}(s)}{V_q(s)} = \frac{K}{s^2 + \frac{1}{\tau}s} =\frac{0.0}{s^2 + 0.0s}
 %    \label{eq:tf_pitch}
