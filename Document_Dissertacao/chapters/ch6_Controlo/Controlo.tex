@@ -4,53 +4,14 @@
 \label{chap:Chapter6} 
 
 O presente capítulo é dedicado à implementação do sistema de controlo em malha fechada do \emph{gimbal}, elemento fulcral para garantir a estabilização e a exatidão do feixe \emph{laser} contra \acp{UAV}. Detalham-se os requisitos do sistema, a arquitetura algorítmica em cascata, o processo de identificação experimental em frequência, o controlador obtido e os ensaios dos mesmos.
+O sistema de controlo do \emph{gimbal} assume o papel crítico de seguir o alvo garantindo a estabilização dinâmica e a rejeição de perturbações externas. Para operacionalizar esta exigência de alta precisão num motor \ac{BLDC}, recorre-se ao \ac{FOC}, uma estratégia vetorial que simplifica a complexa dinâmica trifásica do estator ao transformá-la num modelo linear equivalente ao de um motor de corrente contínua com escovas, desacoplando o fluxo magnético do binário efetivo. Este processo utiliza a transformação de Clarke para projetar as tensões das fases físicas $A$, $B$ e $C$ (desfasadas geometricamente de $120^\circ$) num referencial bidimensional estático $(\alpha, \beta)$, enquanto que a transformação de Park roda este referencial em função do ângulo elétrico instantâneo do rotor $(\theta_e)$, gerando as componentes contínuas de eixo direto ($d$) e de quadratura ($q$). Na malha fechada do sistema, o controlador processa o erro e dita as correções sob a forma de referências de tensão virtuais $V_q$ (binário) e $V_d$ (\textbf{fluxo}, mantido a zero). Subsequentemente, o algoritmo aplica as Transformações Inversas de Park e de Clarke para reverter este vetor contínuo do referencial rotativo de volta em comandos trifásicos alternados variáveis no tempo, os quais aplicam ao \emph{driver} de potência, materializando assim o controlo robusto, suave e determinístico do motor.
 
-%----------------------------------------------------------------------------------------
+\section{Modelação e Identificação}
 
-\section{Requisitos}
-\label{sec:objetivos_controlo}
-
-Para determinar os requisitos de velocidade e exatidão angular do sistema de controlo, torna-se necessário caracterizar previamente o perfil dinâmico dos alvos a seguir. Considerando que o sistema foi projetado para a proteção de infraestruturas críticas contra ameaças aéreas assimétricas, assume-se um cenário operacional onde o vetor inimigo executa uma trajetória de aproximação direta ou tangencial à estação de defesa. 
-
-Tomando como referência plataformas de ataque comuns, como o \ac{UAV} \emph{Shahed 136}, que apresenta uma velocidade de cruzeiro de $185~\text{km/h}$ \parencite{telegraph2024shahed}, estabeleceu-se como cenário de teste limite uma velocidade linear ortogonal à linha de vista do \emph{gimbal} de $50~\text{km/h}$ (equivalente a $13{,}9~\text{m/s}$). A partir destes dados, é possível calcular a velocidade angular mínima que os atuadores devem obter para assegurar o seguimento contínuo do alvo. Modelando geometricamente a trajetória descrita pelo \ac{UAV} no intervalo de um segundo através de um triângulo isósceles em relação ao eixo ótico do \emph{gimbal}, assim como expresso na Figura~\ref{fig:velocidade_angular} , a velocidade angular necessária ($\alpha$) é deduzida através da Equação~\ref{eq:velocidade_angular}:
-
-\begin{figure}[H]
-    \centering
-    \includegraphics[width=0.5\textwidth, keepaspectratio]{chapters/ch6_Controlo/assets/velocidade_angular.pdf}
-    \caption[Ilustração de calculo]{Ilustração da Velocidade Mínima Necessária.}
-    \label{fig:velocidade_angular}
-\end{figure}
-
-\begin{equation}
-    \sin\left(\frac{\alpha}{2}\right) = \frac{\frac{13{,}9}{2}}{d} \implies \sin\left(\frac{\alpha}{2}\right) = \frac{6{,}95}{10} \implies \alpha \approx 1{,}537~\text{rad/s}
-    \label{eq:velocidade_angular}
-\end{equation}
-
-Desta análise resulta que a velocidade angular exigida aos motores é de $1{,}537~\text{rad/s}$ (aproximadamente $88^\circ/\text{s}$), assumindo criticamente que o alvo se encontra a uma distância focal curta de apenas $d = 10~\text{metros}$ da plataforma. À medida que a distância ao alvo aumenta, a exigência de velocidade angular decresce proporcionalmente, transferindo o desafio de controlo para o domínio da exatidão e resolução posicional.
-
-Paralelamente, estabeleceu-se como objetivo operacional a capacidade de manter o seguimento cinemático do alvo a uma distância de empenhamento de $200~\text{metros}$. Para que a neutralização eletrónica ou térmica seja eficaz, arbitrou-se que o feixe \emph{laser} deve manter-se confinado dentro de uma área de impacto com um raio máximo tolerado de $\pm 2{,}5~\text{cm}$ (o que corresponde a uma janela de erro total de $5~\text{cm}$ projetada sobre a superfície da ameaça), assim como ilustrado na Figura~\ref{fig:resolucao}. Utilizando a relação trigonométrica para pequenos ângulos, onde a tangente do desvio angular ($\Delta\theta$) é dada pela razão entre o erro linear admissível e a distância absoluta ao alvo, obtém-se:
+ver slides
 
 
-\begin{figure}[H]
-    \centering
-    \includegraphics[width=0.9\textwidth, keepaspectratio]{chapters/ch6_Controlo/assets/resolução_max.png}
-    \caption[Resolução maxima]{Ilustração da Resolução Mínima Necessária.}
-    \label{fig:resolucao}
-\end{figure}
 
-\begin{equation}
-    \tan(\Delta\theta) = \frac{0{,}025~\text{m}}{200~\text{m}} = 0{,}000125 \implies \Delta\theta = \arctan(0{,}000125) \approx 0{,}0072^\circ
-    \label{eq:precisao_angular}
-\end{equation}
-
-Os resultados da Equação~\ref{eq:precisao_angular} demonstram que qualquer erro de seguimento em malha fechada superior a $0{,}0072^\circ$ inviabiliza a eficácia do sistema à distância estipulada. Este requisito estrito justificou a seleção dos \emph{encoders} magnéticos MT6835 de $21~\text{bits}$, os quais oferecem uma resolução angular teórica quantificada pela Equação~\ref{eq:resolucao_encoder}:
-
-\begin{equation}
-    \text{Resolução} = \frac{360^\circ}{2^{21}} \approx 0{,}000171^\circ
-    \label{eq:resolucao_encoder}
-\end{equation}
-
-Ao confrontar a resolução intrínseca do sensor ($0{,}00017^\circ$) com o requisito de precisão cinemática ($0{,}0072^\circ$), observa-se que o \emph{encoder} oferece uma resolução cerca de 40 vezes superior à estritamente necessária. Esta sobredimensão planeada garante que, mesmo na presença de ruído de leitura ou desalinhamentos mecânicos, a malha de controlo dispõe de informação sensorial com resolução suficiente para mitigar o erro e cumprir os objetivos de estabilização.
 
 %----------------------------------------------------------------------------------------
 
@@ -116,15 +77,17 @@ De forma a caracterizar individualmente a resposta dinâmica de cada canal de at
     \label{fig:bode_identificacao_eixos}
 \end{figure}
 
-\textbf{
-Abordar o pq de ser feito nestas frequencias e o pq de apresentar resultados maus a alta frequencia.}
+A nível de frequutilizou-se 50 rad/s e 10 rad/s como frequência máxima de pitch e yaw, respetivamente, dado que a frequências maiores não é possível detetar com certeza a fase e o ruído do sensor. A frequência minima foi selecionada para obter pelo menos uma decada antes do polo por forma a obter a fase em cerca de 90º. 
 
+Os diagrama de bode obtido demonstra que ambos os motores apresentam uma fase de cerca de 90º graus em baixas frequencias dado polo presente na origem dado que o controlo em tensão é proporcional ao torque e que neste caso é diretamente convertido em velocidade.
 \textbf{falar sobre os resultados referindo que começão a 90/270 dado ter um polo na origem e um polo mecânico (n sei se abordo o polo elétrico que é dificil medir)}
 
 \textbf{abordar a função de transferencia retirada de cada diagrama de bode}
 
-\textbf{utilizou se a ferramenta PIDturner disponibilizada pelo MATLAB para determinar os parametros do PI-DF} \textbf{PI-DF, onde abordar}
 
+\section{Controlador de Seguimento}
+
+Com as funções de transferência identificadas através do ensaio em frequência, constata-se que a tensão de quadratura $V_q(s)$ é diretamente proporcional ao binário eletromecânico aplicado às fases estatóricas, e a posição angular final de $\Theta(s)$ se caracteriza como um sistema de Tipo 1, devido à presença do integrador puro intrínseco. De modo a capacitar o \emph{gimbal} para o seguimento rigoroso do \ac{UAV} a uma velocidade constante limite sem erros posicionais, caracterizando-se por seguimento em rampa, projetou-se uma arquitetura de controlo baseada num compensador Proporcional-Integral com Ação Derivativa na Realimentação(PI-D). Nesta topologia, a ação derivativa foi aplicada exclusivamente ao sinal de realimentação de velocidade e não ao sinal de erro posicional, uma estratégia que visa eliminar por completo o fenómeno de \emph{setpoint kick}, que consiste em picos abruptos e saturações violentas na variável de atuação sempre que a referência de trajetória sofre alterações súbitas ou degraus gerados pelo algoritmo de visão computacional. Para reduzir o ruído produzido na velocidade procedeu-se à integração de um filtro passa-baixas digital de primeira ordem diretamente acoplado ao bloco derivativo, atenuando a amplificação do ruído de alta frequência decorrente da diferenciação numérica do sinal do \emph{encoder} magnético, garantindo que apenas as variações dinâmicas reais da velocidade influenciem a ação de controlo. Apoiado no modelo paramétrico linearizado da planta obtido previamente via Diagrama de Bode, desenvolveu-se um modelo de simulação computacional em ambiente \emph{Simulink}, a aproximar o ambiente virtual à realidade física do protótipo, operando à discretização temporal com o delta t igual ao verificado no controle físico, integraram-se não-linearidades estritas no modelo de simulação, designadamente os limites de saturação de tensão impostos pela eletrónica de potência dos \emph{drivers} e a zona morta (\emph{dead-band}) induzida pelo atrito estático presente nos rolamentos e nos pontos de contacto da estrutura fabricada em manufatura aditiva. A sintonia final e a otimização dos ganhos do controlador foram executadas recorrendo à ferramenta \emph{PID Tuner} do \emph{MATLAB}, através da qual se testaram iterativamente múltiplos perfis de compensadores com filtro na derivada para a malha. O objetivo deste processo de otimização consistiu em encontrar um equilíbrio de desempenho que maximizasse a largura de banda e garantisse uma resposta transiente extremamente rápida face à dinâmica de fuga da ameaça, assegurando, em simultâneo, que a ação de comando calculada não forçasse a saturação contínua da tensão do motor, prevenindo fenómenos de instabilidade.
 
 
 
