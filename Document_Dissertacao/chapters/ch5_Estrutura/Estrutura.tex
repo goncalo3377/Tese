@@ -1,0 +1,205 @@
+% Chapter 3
+
+\chapter{Plataforma} % Main chapter title
+\label{chap:Chapter5} % For referencing the chapter elsewhere, use \ref{chap:Chapter3} 
+
+%----------------------------------------------------------------------------------------
+
+O presente capítulo dedica-se à descrição detalhada, seleção e dimensionamento dos componentes físicos e equipamentos que constituem a arquitetura do sistema anti-\ac{UAV}. Dados os requisitos estritos de resolução angular da plataforma e o objetivo imperativo de manter um custo de desenvolvimento reduzido, optou-se pelo desenvolvimento de raiz de todo o ecossistema. Esta abordagem englobou a conceção e manufatura da estrutura mecânica, o dimensionamento dos motores elétricos, a integração de sensores de posição (\emph{encoders}) de alta resolução, a seleção da câmara ótica e a especificação das plataformas computacionais distribuídas que coordenam o fluxo de dados em tempo real.
+
+Para guiar a compreensão do trabalho desenvolvido, a estrutura deste capítulo aborda primeiramente a conceção mecânica, a cinemática dos eixos e os parâmetros de fabrico estrutural do \emph{gimbal}, seguidamente, detalham-se as especificações dos motores elétricos e a integração dos sensores angulares e, por fim, descreve-se a topologia computacional que garante o processamento do sistema.
+
+\section{Estrutura do \emph{Gimbal}}
+
+A conceção mecânica do \emph{gimbal} foi realizada integralmente de raiz através do \emph{software} de modelação tridimensional \emph{Blender}, tendo como prioridades a rigidez estrutural a modularidade e a minimização de custos. A plataforma opera com base em dois eixos de rotação ortogonais sendo estes o eixo de azimute (\emph{yaw}), encarregue do varrimento e seguimento do alvo no plano horizontal, e o eixo de elevação (\emph{pitch}), responsável pelo ajuste angular vertical. Estabeleceu-se uma relação de interdependência onde a estrutura de elevação se encontra montada sobre o conjunto móvel de azimute, desta forma, a atuação em \emph{yaw} transporta solidariamente todo o sistema superior, ao passo que o movimento de \emph{pitch} ocorre de forma independente. A carga útil, constituída pela câmara digital e pelo emissor \emph{laser}, encontra-se montada de forma alinhada e solidária com o eixo de elevação. 
+
+A estrutura é composta por três módulos principais conforme ilustrado na Figura~\ref{fig:visao_geral_gimbal}:
+\begin{itemize}
+    \item \textbf{Base:} O componente estacionário que serve de interface com a plataforma de suporte, onde se aloja o atuador responsável pelo movimento de \emph{yaw}.
+    \item \textbf{Estrutura Central:} Esta peça atua como o elemento de ligação dinâmico; encontra-se acoplada ao eixo de \emph{yaw} e suporta, simultaneamente, o motor do eixo de \emph{pitch}. Esta configuração permite que a estrutura central rode solidariamente com o movimento horizontal, transportando o sistema de elevação. Para facilitar a manutenção e montagem, esta secção foi desenhada de forma tripartida, permitindo que os braços de suporte e o motor de \emph{pitch} sejam removidos de forma independente através de uniões aparafusadas.
+    \item \textbf{Eixo de \emph{Pitch}:} O componente final que contém a carga útil (o sistema laser e a câmara) e está acoplado ao motor de \emph{pitch}.
+\end{itemize}
+
+
+\begin{figure}[H]
+    \centering
+    % Primeira Subfigura (Esquerda)
+    \begin{subfigure}[b]{0.333\textwidth}
+        \centering
+        \includegraphics[width=\textwidth,keepaspectratio,trim={10cm 0 10cm 0},clip]{chapters/ch5_Estrutura/assets/base.png}
+        \caption{Módulo da Base.}
+        \label{fig:sub_base}
+    \end{subfigure}\hfill
+    % Segunda Subfigura (Centro)
+    \begin{subfigure}[b]{0.333\textwidth}
+        \centering
+        \includegraphics[width=\textwidth,keepaspectratio,trim={10cm 0 10cm 0},clip]{chapters/ch5_Estrutura/assets/torre_Yaw.png}
+        \caption{Estrutura Central.}
+        \label{fig:sub_braco}
+    \end{subfigure}\hfill
+    % Terceira Subfigura (Direita)
+    \begin{subfigure}[b]{0.333\textwidth}
+        \centering
+        \includegraphics[width=\textwidth,keepaspectratio,trim={10cm 0 10cm 0},clip]{chapters/ch5_Estrutura/assets/eixo.png}
+        \caption{Eixo de \emph{Pitch}.}
+        \label{fig:sub_pitch}
+    \end{subfigure}
+    
+    % Legenda Geral da Figura Tripla
+    \caption[Componentes Estruturais do Gimbal]{Representação tridimensional dos três módulos principais que constituem a estrutura do \emph{gimbal}.}
+    \label{fig:componentes_gimbal}
+\end{figure}
+
+
+
+Para garantir a estabilização e prolongar a vida útil dos atuadores, utilizou-se configurações de suporte mecânico diferenciadas para cada eixo, inspiradas na robustez geométrica da plataforma de defesa aérea \emph{HELIOS} da \cite{lockheed2021helios}. O eixo de elevação beneficia de uma topologia de apoio duplo que sustenta a carga útil em ambas as extremidades, dissipando os binários de flexão e protegendo o veio do motor contra cargas radiais, o que assegura a repetibilidade posicional. Em contrapartida, o eixo de azimute utiliza uma configuração de apoio simples, uma vez que a massa da torre superior se encontra alinhada com o centro de gravidade do protótipo, resultando numa componente de carga predominantemente axial sobre o motor da base. 
+
+Esta abordagem modular não apenas simplificou o processo de fabrico como permite a substituição rápida de componentes para iterações de desenho ou manutenção do sistema. O modelo montado apresenta uma altura de cerca de 13.6~cm e uma largura de cerca de 14~cm, sendo esta uma estrutura circular, conforme apresentado na Figura~\ref{fig:componentes_gimbal}:
+
+\textbf{O desanho completo para deixar em apendice tem de ser em formato parecido a desenho tecnico ou apenas coloco as imagens ampliadas?}
+
+
+\begin{figure}[H]
+    \centering
+    % Substitui pelo caminho real da tua imagem (ex: render do Blender)
+    \includegraphics[width=0.85\textwidth,keepaspectratio]{chapters/ch5_Estrutura/assets/base.png}
+    \caption[Visão Geral da Estrutura do Gimbal]{Visão Geral da modelação tridimensional do \emph{gimbal}, evidenciando a disposição dos eixos de \emph{yaw} e \emph{pitch}.}
+    \label{fig:visao_geral_gimbal}
+\end{figure}
+
+
+A construção do protótipo recorreu à manufatura aditiva por \ac{FDM} numa impressora Creality Ender 3 SE, utilizando o polímero PLA (\emph{Polylactic Acid}). Este material foi selecionado pelo compromisso ideal entre facilidade de prototipagem, rigidez mecânica e baixo custo. As principais configurações utilizadas para a manufatura foram compiladas na Tabela~\ref{tab:config_impressao3d} de forma a utilizar a temperatura recomendada pela marca do filamento, camadas finas por forma a obter definição e velocidade baixa para diminuir o risco de falhas.
+
+\begin{longtable}{ll}
+    \caption[Configurações Principais da Impressão 3D]{Parâmetros e configurações detalhadas do processo de impressão 3D das componentes do sistema.} \label{tab:config_impressao3d} \\
+    \toprule
+    \textbf{Parâmetro / Configuração} & \textbf{Valor Definido} \\
+    \midrule
+    \endhead 
+    
+    \bottomrule
+    \endfoot 
+    
+    Temperatura do Bico (1.ª Camada) & 205 °C \\
+    Temperatura do Bico (Restantes Camadas) & 200 °C \\
+    Temperatura da Mesa & 50 °C \\
+    Multiplicador de Extrusão (\emph{Flow}) & 0.87 \\
+    Altura da Camada & 0.12 mm \\
+    Densidade de Preenchimento (\emph{Infill}) & 50\% \\
+    Velocidade de Perímetros & 70 mm/s \\
+    Velocidade de Preenchimento & 70 mm/s \\
+    Velocidade de Preenchimento Sólido & 70 mm/s \\
+    Velocidade de Deslocamento (\emph{Travel}) & 50 mm/s \\
+    Aba (\emph{Brim}) & Ativada \\
+\end{longtable}
+
+No total, a estrutura é composta por 7 peças impressas, distribuídas em 1 peça na base, 4 peças para a constituição da estrutura central e 2 peças para o eixo de \emph{pitch}. Na base, o componente corresponde próprio modelo. Na estrutura central, existe a peça de acoplamento ao motor de \emph{yaw} (fixo na base), a base da estrutura central e duas estruturas verticais responsáveis por suportar o motor e o rolamento de apoio do eixo de \emph{pitch}. No eixo de \emph{pitch}, existe uma peça encarregue da junção mecânica entre o corpo do eixo e o respetivo motor de elevação, e o próprio corpo estrutural onde é colocada a carga útil.
+
+Ao longo da construção, foram utilizados parafusos de cabeça sextavada interior, recorrendo-se a inserções roscadas metálicas e porcas hexagonais para efetuar a união mecânica das peças. Para garantir que os parafusos e as componentes impressas se ajustassem sem interferência, aplicou-se uma tolerância de 0.3~mm. Deste modo, para um furo com diâmetro nominal M3 (3~mm) na modelação 3D, projetou-se uma abertura estrutural de 3.3~mm, assegurando a correta montagem dos componentes.
+
+\section{Requisitos}
+\label{sec:requisitos}
+
+Para determinar os requisitos de velocidade e exatidão angular do sistema de controlo, torna-se necessário caracterizar previamente o perfil dinâmico dos alvos a seguir. Considerando que o sistema foi projetado para a proteção de infraestruturas críticas contra ameaças aéreas assimétricas, assume-se um cenário operacional onde o vetor inimigo executa uma trajetória de aproximação direta ou tangencial à estação de defesa. 
+
+Tomando como referência plataformas de ataque comuns, como o \ac{UAV} \emph{Shahed 136}, que apresenta uma velocidade de cruzeiro de $185~\text{km/h}$ \parencite{buncombe2024russia}, estabeleceu-se como cenário de teste limite uma velocidade linear ortogonal à linha de vista do \emph{gimbal} de $50~\text{km/h}$ (equivalente a $13{,}9~\text{m/s}$). A partir destes dados, é possível calcular a velocidade angular máxima instantânea que os atuadores devem desenvolver para assegurar o seguimento contínuo do alvo no ponto de maior aproximação perpendicular. Esta exigência cinemática baseia-se na relação direta entre a componente da velocidade linear perpendicular ao eixo ótico ($v$) e a distância absoluta ao centro de rotação ($d$). Assim, a velocidade angular necessária ($\omega$) é deduzida diretamente através da Equação~\ref{eq:velocidade_angular}:
+
+\begin{equation}
+    \omega = \frac{v}{d} \implies \omega = \frac{13{,}9~\text{m/s}}{10~\text{m}} = 1{,}39~\text{rad/s}
+    \label{eq:velocidade_angular}
+\end{equation}
+
+Desta análise resulta que a velocidade angular máxima exigida aos motores na pior condição de operação (curto alcance) é de $1{,}39~\text{rad/s}$ (aproximadamente $79{,}6^\circ/\text{s}$), assumindo criticamente que o alvo se encontra a uma distância curta de apenas $d = 10~\text{metros}$ do \emph{gimbal}. À medida que a distância ao alvo aumenta para o raio de empenhamento nominal de $200~\text{metros}$, esta exigência decresce estritamente para $0{,}0695~\text{rad/s}$ (cerca de $4^\circ/\text{s}$), transferindo o desafio principal de controlo do domínio da velocidade para o domínio da exatidão e resolução posicional.
+
+Para além dos requisitos cinemáticos de velocidade, a determinação da resolução angular necessária da plataforma constitui um pilar crítico para assegurar a exatidão de posicionamento do feixe. Tendo em conta o perfil geométrico do \ac{UAV} \emph{Shahed 136}, cuja estrutura principal apresenta um diâmetro aproximado de $25~\text{cm}$ \parencite{car2023multipurpose}, estabeleceu-se como critério de projeto uma tolerância de exatidão linear correspondente a um quinto dessa dimensão, fixando-se em $\pm 5~\text{cm}$ ($\pm 0.05~\text{m}$). Esta discrepância linear traduz-se num requisito angular de apontamento ($\Delta\theta$) que varia dinamicamente em função da distância ($d$) entre o \emph{gimbal} e a ameaça, sendo modelada pela relação trigonométrica para pequenos ângulos $\Delta\theta = \arctan(0.05/d)$. Ao definir o cenário de empenhamento nominal para uma distância de referência de $100~\text{metros}$, a resolução angular estrita que o sistema de controlo e sensorização deve garantir é calculada diretamente através da Equação~\ref{eq:resolucao_100m}:
+
+\begin{equation}
+    \Delta\theta = \arctan\left(\frac{0.05~\text{m}}{100~\text{m}}\right) \approx 0.0005~\text{rad} \approx 0.0286^\circ
+    \label{eq:resolucao_100m}
+\end{equation}
+
+Desta equação resulta que qualquer erro de posicionamento em malha fechada superior a $0{.}0286^\circ$ à distância estipulada inviabiliza o cumprimento do sistema por projetar o feixe fora do limite aceitável de $\pm 5~\text{cm}$. Este limiar define estritamente a resolução mínima exigida ao hardware de leitura angular e dita a parametrização do filtro digital do \emph{encoder}, garantindo que a plataforma consiga detetar, processar e corrigir micro-desvios de regime permanente dentro desta janela de tolerância a 100 metros.
+
+Para validar se o conjunto constituído pelo motor e pelo controlador possui a capacidade técnica de cumprir os requisitos de apontamento estipulados, torna-se necessário modelar a resolução mecânica mínima que o bloco de atuação consegue alcançar. Esta resolução é governada, por um lado, pelo fator físico do motor através do seu número de pares de polos ($N_{pp}$), que atua como uma redução magnética natural. Por outro lado, depende da capacidade do controlador em discretizar a amplitude da onda de tensão aplicada, onde o número de níveis elétricos disponíveis é ditado estritamente pela relação entre a frequência de relógio interna do temporizador ($f_{\text{clock}}$) e a frequência de comutação do sinal PWM ($f_{\text{PWM}}$). O sistema de atuação deve satisfazer rigorosamente a inequação expressa pela Equação~\ref{eq:validacao_generica}:
+
+\begin{equation}
+    \text{Res}_{\text{mecânica}} = \frac{360^\circ}{N_{pp} \cdot \left( \frac{f_{\text{clock}}}{f_{\text{PWM}}} \right)} < 0{,}0286^\circ
+    \label{eq:validacao_generica}
+\end{equation}
+
+Em complemento ao bloco de atuação, a capacidade do sistema em detetar e discriminar os desvios do \emph{gimbal} depende diretamente da resolução espacial do sensor. Esta resolução é ditada pelo número de bits de amostragem ($N_b$), o qual define o número de posições discretas em que uma rotação mecânica completa de $360^\circ$ é dividida, devendo satisfazer a Equação~\ref{eq:validacao_encoder}:
+
+\begin{equation}
+    \text{Res}_{\text{sensor}} = \frac{360^\circ}{2^{N_b}} < 0{,}0286^\circ
+    \label{eq:validacao_encoder}
+\end{equation}
+
+
+Para o subsistema de visão computacional, o dimensionamento ótico é governado pelo compromisso entre o critério cinemático de seguimento e o critério espacial de deteção. No primeiro caso, para discernir o vetor de erro limite de $\pm 5~\text{cm}$ a uma distância nominal de $100~\text{metros}$, o Campo de Visão Instantâneo ($\text{IFOV}$) da câmara deve ser, no máximo, de $0.0286^\circ$. Em paralelo, o requisito de deteção impõe uma restrição na mesma ordem de grandeza; baseando-se no limiar crítico de $1\%$ da área da imagem necessário para a inferência robusta do modelo de aprendizagem profunda \parencite{tariq2025small}, estabeleceu-se a necessidade de uma amostragem mínima de $64\times64$ píxeis para cobrir a envergadura total de $2.5~\text{m}$ da ameaça. Esta restrição espacial determina que o $\text{IFOV}$ do sensor deve satisfazer a Equação~\ref{eq:validacao_camera}:
+
+\begin{equation}
+    \text{IFOV}_{\text{câmara}} = \frac{\text{FoV}_{\text{total}}}{N_{\text{píxeis}}} \le \frac{\arctan\left(\frac{2{,}5~\text{m}}{100~\text{m}}\right)}{64} \approx 0{,}0224^\circ
+    \label{eq:validacao_camera}
+\end{equation}
+
+Como o limiar imposto pelo algoritmo de deteção ($0.0224^\circ$) é ligeiramente mais restritivo do que a tolerância mecânica de apontamento ($0.0286^\circ$), a conformidade com o critério de deteção assegura, por inerência, a resolução angular necessária para as funções de seguimento e correção do feixe em tempo real.
+
+\section{Intrumentação do \emph{Gimbal}}
+
+Os atuadores selecionados, numa primeira abordagem, foram os servo motores Jx BLS-12V7146. Estes dispositivos oferecem um binário de $46\text{ kgf}\cdot\text{cm}$ (aproximadamente $4.5\text{ N}\cdot\text{m}$), contudo, a sua resolução angular não se encontrava especificada no \emph{datasheet} do fabricante, sendo o seu controlo efetuado via modulação por largura de pulso (PWM). Para determinar a sua resolução real, efetuaram-se ensaios experimentais com a estrutura mecânica montada, utilizando o ponteiro laser como referência visual. Face às limitações de resolução identificadas nestes ensaios preliminares, optou-se pela transição para motores \ac{BLDC}. Embora os motores \ac{BLDC} apresentem um binário máximo inferior, oferecem uma resolução angular significativamente superior e um movimento mais suave. Ao contrário dos servomotores convencionais, cujo controlo é realizado internamente de forma rígida, a atuação dos motores \ac{BLDC} é efetuada diretamente por \emph{software}, proporcionando total liberdade na configuração da sua arquitetura.
+
+%\textbf{Onde abordo os ensaios de resolção dos servo motores?}
+
+O novo sistema de atuação integra dois motores \ac{BLDC}, sendo o modelo Mitoot 2206 responsável pelo movimento de \emph{pitch}, e o iFlight GM3506, dotado de maior binário, encarregue do movimento de \emph{yaw}. Sendo o Mitoot 2206 um motor compacto, caracterizado por uma altura de 14.95~mm e um diâmetro exterior de 28.00~mm, e dada a escassez de informações técnicas detalhadas fornecidas pelo fabricante, tornou-se necessária uma caracterização experimental em bancada de ensaios para determinar os seus parâmetros fundamentais de controlo. Primeiramente, procedeu-se à medição da resistência entre as bobinas, obtendo-se um valor de $17.7~\Omega$. Consequentemente, a resistência equivalente de cada bobina individual foi estimada em aproximadamente $8.85~\Omega$. Para a determinação do número de pares de polos do motor, recorreu-se à energização sequencial das fases em malha aberta, aplicando um fluxo magnético estáticos. Através da contagem das posições de alinhamento magnético estável necessárias para completar uma revolução mecânica de $360^\circ$, contabilizaram-se 7 pares de polos.
+
+%Para a determinação da constante de velocidade ($K_V$) do motor, realizou-se um ensaio incremental de tensão. Aplicou-se uma variação de 0.1~V em cada patamar de teste até atingir o limite operacional de 5~V, monitorizando em tempo real a velocidade de rotação através de um \emph{encoder} (cuja especificação detalhada será apresentado a seguir), resultando num $K_V$ experimental de aproximadamente $225.5~\text{rpm/V}$. 
+
+O motor iFlight GM3506, em comparação com o motor de \emph{pitch}, apresenta dimensões superiores, registando uma altura de 17.8~mm e um diâmetro exterior de 40.00~mm, e possui uma configuration interna de 11 pares de polos, o que confere uma elevada resolução intrínseca para o controlo angular do eixo de azimute (\emph{yaw}). De acordo com o \emph{datasheet} do fabricante, o motor possui uma resistência de $5.6~\Omega$ por bobina.
+
+
+Para garantir a exatidão e permitir um controlo em malha fechada, ambos os eixos foram equipados com o sensor de posição angular magnético MT6835 \parencite{magntek2024mt6835}. Este sensor foi selecionado pela sua versatilidade e elevada resolução intrínseca, oferecendo interfaces de comunicação e saída do tipo PWM, ABI, UVW e \ac{SPI}. Para a implementação prática, optou-se exclusivamente pelo protocolo \ac{SPI}, por se tratar da única via que permite explorar a resolução total de 21~bits oferecida pelo componente. Esta elevada resolução angular é fundamental para assegurar a capacidade no seguimento de alvos a longas distâncias. A integração mecânica do sensor foi realizada através de um suporte dedicado, projetado e fabricado via manufatura aditiva, posicionado na proximidade imediata do motor para garantir o alinhamento axial. O princípio de medição baseia-se num íman permanente com magnetização diametral (cujos polos magnéticos se dividem na mesma face orbital) fixado diretamente à extremidade do veio rotativo do motor, permanecendo o circuito integrado do \emph{encoder} estático em relação à estrutura. No que concerne à exatidão angular do sistema de leitura, o sensor apresenta uma exatidão nominal de fábrica de $\pm 0.5^\circ$, aferida sob uma temperatura de referência de $25~^\circ\text{C}$.
+    
+A carga útil embarcada no eixo de elevação é constituída por um subsistema de aquisição ótica e um emissor direcionado para a validação do apontamento em tempo real. A componente de visão computacional assenta na câmara \emph{Raspberry Pi AI Camera}, apresentada na figura \ref{fig:rapberry_cam}, selecionada com base na sua disponibilidade prévia da Escola Naval. Este dispositivo integra o sensor \emph{Sony IMX500 RGB}, o qual oferece flexibilidade operacional ao permitir a captura de vídeo com uma resolução de $4056\times3040$ píxeis a 10 fps para maior detalhe estático, ou de $2028\times1520$ píxeis a $30~\text{fps}$ para garantir a fluidez necessária ao seguimento dinâmico. Adicionalmente, a ótica apresenta um campo de visão de $78.3^\circ \pm 3^\circ$, uma distância focal de $4.74~\text{mm}$ e um sistema de foco manual ajustável desde $20~\text{cm}$ até ao infinito. Solidário a este sensor, implementou-se um ponteiro \emph{laser} genérico, apresentado na figura \ref{fig:laser}, com uma potência de $100~\text{mW}$ que atua como o iluminador, operando num comprimento de onda de $650~\text{nm}$ na faixa do espetro visível vermelho, o que possibilita a verificação visual imediata do alinhamento.
+
+\begin{figure}[H]
+    \centering
+    % --- PRIMEIRA FIGURA (ESQUERDA) ---
+    \begin{minipage}{0.48\textwidth}
+        \centering
+        \includegraphics[width=0.5\textwidth, keepaspectratio]{chapters/ch5_Estrutura/assets/raspberry-pi-ai-camera.jpg}
+        \caption{\emph{Raspberry Pi AI Camera}.}
+        \label{fig:rapberry_cam}
+    \end{minipage}
+    \hfill % Preenche o espaço horizontal entre as duas minipages
+    % --- SEGUNDA FIGURA (DIREITA) ---
+    \begin{minipage}{0.48\textwidth}
+        \centering
+        \includegraphics[width=0.7\textwidth, keepaspectratio]{chapters/ch5_Estrutura/assets/laser.png}
+        \caption{Laser Genérico Utilizado.}
+        \label{fig:laser}
+    \end{minipage}
+\end{figure}
+
+%\item \textbf{Calibração pelo Utilizador:} Recorrendo à funcionalidade interna de auto-calibração ativa (\emph{auto-calibration}), é possível atingir um erro residual inferior a $0.07^\circ$.
+
+\section{Processamento}
+
+O ciclo de processamento e controlo do \emph{gimbal} baseia-se numa arquitetura de computação distribuída, estruturada numa linha de processos sequenciais na qual são utilizadas diferentes plataformas com propósitos específicos. A topologia de interligação entre estes dispositivos de computação encontram-se esquematizada na Figura~\ref{fig:fluxo_processamento}:
+
+\begin{figure}[H]
+    \centering
+    % Substitui pelo nome exato do teu ficheiro de imagem na pasta assets
+    \includegraphics[width=0.85\textwidth,keepaspectratio]{chapters/ch5_Estrutura/assets/Diagrama_Processamento.pdf} 
+    \caption[Diagrama de Blocos da Arquitetura de Processamento]{Diagrama das interligações de comunicação dispositivos.}
+    \label{fig:fluxo_processamento}
+\end{figure}
+
+
+O fluxo de processamento é o seguinte: a câmara RGB acoplada ao sistema ótico realiza a captura contínua de fotogramas, sendo esta interface gerida diretamente pelo Raspberry Pi através de uma ligação \ac{CSI}. O vídeo é transferido do Raspberry Pi via cabo \emph{Ethernet} em tempo real até a uma estação de computação com elevada capacidade computacional. Este computador é encarregue de executar a inferência do modelo de aprendizagem profunda (\emph{deep learning}) treinado para a deteção de \acp{UAV}. A partir desta inferência, a posição espacial do \ac{UAV} é identificada através do centro geométrico da caixa de delimitação (\emph{bounding box}) no referencial bidimensional do plano da imagem, expresso em coordenadas de píxeis $(u, v)$. De forma a quantificar o desvio, este centro é confrontado com a coordenada de projeção do feixe \emph{laser}, previamente mapeada e calibrada em função da distância através de ensaios num fundo opaco, obtendo-se o vetor de erro linear. Contudo, para que este desvio em píxeis $(\Delta u, \Delta v)$ possa ser processado pelas malhas de controlo dinâmico, o sistema executa uma transformação cinemática para o domínio angular \textbf{(convertendo a métrica de píxeis para radianos ou graus)} com base nas propriedades óticas da câmara, tais como a distância focal e as dimensões matriciais do sensor. Os erros angulares calculados são transmitidos da estação de computação para o \emph{Raspberry Pi} via \emph{Ethernet} e, de seguida, reencaminhados para o microcontrolador ESP32-S3 através de uma interface de comunicação série, superando a limitação de ausência de conectividade \emph{Ethernet} nativa neste dispositivo. Por fim, o microcontrolador processa os dados de erro e faz o controlo dinâmico, aplicando os sinais de comando adequados para os \emph{drivers} de potência. Estes módulos regulam a energia elétrica injetada nas fases dos motores \ac{BLDC}, corrigindo a atitude do \emph{gimbal} de modo a neutralizar o erro posicional e garantir o alinhamento contínuo e estável do sistema \emph{laser} com a ameaça detetada.
+
+%referencias:
+%\begin{itemize}
+%    \item mitoot 2206 - https://manuals.plus/ae/1005006008489660
+%    \item iflight GM3506 - https://iflight-rc.eu/en/products/ipower-gm3506-gimbal-motor
+%    \item servo motor - https://rcdrone.top/products/jx-servo-bls-12v7146?srsltid=AfmBOooklTOpngN0AFkQde6dj6JJ9makVM-yFTHbND61-NIOBwJK5ddr
+%\end{itemize}
