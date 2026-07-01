@@ -3,59 +3,77 @@
 \chapter{Controlo} % Título expandido mais formal
 \label{chap:Chapter6} 
 
-O presente capítulo é dedicado à implementação do sistema de controlo em malha fechada do \emph{gimbal}, elemento fulcral para garantir a estabilização e a exatidão do feixe \emph{laser} contra \acp{UAV}. Detalham-se os requisitos do sistema, a arquitetura algorítmica em cascata, o processo de identificação experimental em frequência, o controlador obtido e os ensaios dos mesmos.
-O sistema de controlo do \emph{gimbal} assume o papel crítico de seguir o alvo garantindo a estabilização dinâmica e a rejeição de perturbações externas. Para operacionalizar esta exigência de alta precisão num motor \ac{BLDC}, recorre-se ao \ac{FOC}, uma estratégia vetorial que simplifica a complexa dinâmica trifásica do estator ao transformá-la num modelo linear equivalente ao de um motor de corrente contínua com escovas, desacoplando o fluxo magnético do binário efetivo. Este processo utiliza a transformação de Clarke para projetar as tensões das fases físicas $A$, $B$ e $C$ (desfasadas geometricamente de $120^\circ$) num referencial bidimensional estático $(\alpha, \beta)$, enquanto que a transformação de Park roda este referencial em função do ângulo elétrico instantâneo do rotor $(\theta_e)$, gerando as componentes contínuas de eixo direto ($d$) e de quadratura ($q$). Na malha fechada do sistema, o controlador processa o erro e dita as correções sob a forma de referências de tensão virtuais $V_q$ (binário) e $V_d$ (\textbf{fluxo}, mantido a zero). Subsequentemente, o algoritmo aplica as Transformações Inversas de Park e de Clarke para reverter este vetor contínuo do referencial rotativo de volta em comandos trifásicos alternados variáveis no tempo, os quais aplicam ao \emph{driver} de potência, materializando assim o controlo robusto, suave e determinístico do motor.
+
+O presente capítulo é dedicado à implementação do sistema de controlo em malha fechada do \emph{gimbal}, elemento fulcral para garantir a estabilização e a exatidão do feixe \emph{laser} contra \acp{UAV}. Para operacionalizar esta exigência de alta precisão num motor \ac{BLDC}, a camada base de acionamento recorre ao Controlo por Orientação de Campo (\ac{FOC}). Esta estratégia vetorial simplifica a dinâmica trifásica do estator ao transformá-la num modelo linear equivalente ao de um motor de corrente contínua, desacoplando o fluxo magnético do binário efetivo através das transformações de Clarke e Park e das suas respetivas inversas, as quais ditam as correções sob a forma de referências de tensão virtuais $V_q$ (binário) e $V_d$ (fluxo, mantido a zero).
+
+Sobre esta fundação, a arquitetura proposta adota uma estratégia de comutação baseada em limites de erro para conciliar a rapidez de captura com a precisão absoluta de apontamento, alternando de forma automática entre dois controladores estruturalmente independentes. O primeiro estágio é governado pelo Controlador de Varrimento, encarregue de executar as trajetórias sistemáticas de varrimento do céu e de aproximar celeremente o \emph{gimbal} da vizinhança da ameaça assim que esta é identificada pelo modelo de visão. Por ser projetado com uma margem de estabilidade conservadora para mitigar dinâmicas oscilatórias fora do campo de visão da câmara.
+
+A transição para o segundo estágio ocorre de forma automática assim que o módulo do erro angular de apontamento cai abaixo de um limiar predefinido ($|e(t)| \le \epsilon$), momento em que a arquitetura desativa o estágio inicial e comuta para o Controlador de Seguimento ($C_2$). Esta segunda estrutura apresenta uma parametrização significativamente mais agressiva que visa anular qualquer desfasamento cinemático residual, garantindo estritamente um erro em regime permanente nulo face a entradas em rampa de modo a fixar o feixe no centro do alvo. Para detalhar o desenvolvimento desta arquitetura, as secções seguintes abordam, de forma sequencial, o processo de identificação experimental em frequência, o projeto analítico dos controladores obtidos e a sua respetiva validação em bancada de ensaios.
 
 \section{Modelação e Identificação}
 
-ver slides
+A análise do subsistema de atuação requer a modelação matemática dos atuadores síncronos de ímanes permanentes que controlam os eixos da plataforma. Originalmente, a dinâmica elétrica de um motor sem escovas (\ac{BLDC}) é descrita diretamente no referencial trifásico ($abc$) através das suas equações de tensão:
+
+\begin{equation}
+    v_{as} = R_s i_{as} + (L_s - M)\frac{di_{as}}{dt} + e_{as}
+    \label{eq:bldc_fase_a}
+\end{equation}
+
+\begin{equation}
+    v_{bs} = R_s i_{bs} + (L_s - M)\frac{di_{bs}}{dt} + e_{bs}
+    \label{eq:bldc_fase_b}
+\end{equation}
+
+\begin{equation}
+    v_{cs} = R_s i_{cs} + (L_s - M)\frac{di_{cs}}{dt} + e_{cs}
+    \label{eq:bldc_fase_c}
+\end{equation}
+
+onde $v_{as}$, $v_{bs}$ e $v_{cs}$ representam as tensões aplicadas a cada fase, $R_s$ é a resistência do estator, $L_s$ e $M$ correspondem às indutâncias próprias e mútuas das bobinas, e $e_{as}$, $e_{bs}$, $e_{cs}$ denotam as forças contraeletromotrizes induzidas. O binário eletromagnético total ($T_e$) gerado no entreferro é deduzido a partir da potência elétrica convertida:
+
+\begin{equation}
+    T_e = \frac{e_{as}i_{as} + e_{bs}i_{bs} + e_{cs}i_{cs}}{\omega_m}
+    \label{eq:binario_bldc_completo}
+\end{equation}
+
+sendo $\omega_m$ a velocidade angular mecânica do rotor. Quando o motor é acionado recorrendo à estratégia clássica de comutação eletrónica por condução a $120^\circ$, em cada setor de operação existem apenas duas fases ativas em série a conduzir correntes de igual magnitude e sinal oposto, permanecendo a terceira fase em circuito aberto. Sob este regime estabilizado, as variáveis elétricas e as forças contraeletromotrizes trapezoidais simplificam-se, resultando numa produção de binário linear e idealmente constante.
+
+Conforme estabelecido no \emph{Springer Handbook of Robotics} \parencite{siciliano2016springer}, apesar de apresentarem arquiteturas físicas distintas, os motores \ac{DC} convencionais e os motores \ac{BLDC} podem ser descritos por equações dinâmicas virtualmente idênticas. Esta equivalência permite determinar o comportamento do atuador síncrono através de um modelo linear equivalente de corrente contínua:
+
+\begin{equation}
+    v_a = R_a i_a + L_a \frac{di_a}{dt} + v_b
+    \label{eq:dc_eletrica}
+\end{equation}
+
+\begin{equation}
+    J \frac{d\omega_m}{dt} + B \omega_m = T_m - \frac{T_l}{r}
+    \label{eq:dc_mecanica}
+\end{equation}
+
+Nas Equações~\ref{eq:dc_eletrica} e~\ref{eq:dc_mecanica}, $v_a$ e $i_a$ são a tensão e a corrente equivalentes, $R_a$ e $L_a$ representam a resistência e a indutância vistas pelo controlador, $B$ dita o coeficiente de atrito viscoso, $v_b$ é a força contraeletromotriz ($v_b = K_b \omega_m$), $T_m$ é o binário motor ($T_m = K_t i_a$), $T_l$ traduz os binários de perturbação externa (carga) e $r$ indica a relação de transmissão mecânica. No protótipo desenvolvido nesta dissertação, os atuadores operam em regime de acionamento direto, ditando uma relação de transmissão unitária ($r = 1$) que elimina a necessidade de sistemas de engrenagens. Adicionalmente, devido a esta configuração mecânica de baixo atrito, às velocidades de operação reduzidas e ao amortecimento eletromecânico dominante introduzido por $K_b$, as perdas viscosas tornam-se numericamente insignificantes, assumindo-se por projeto que $B \approx 0$.
+
+Embora ambos os eixos partilhem deste modelo fundamental de acionamento direto, as suas respostas dinâmicas reais diferem devido à distribuição cumulativa de massa na estrutura do \emph{gimbal}. Para efeitos de modelação, assume-se que as massas associadas a ambos os eixos se encontram geometricamente centradas em relação aos respetivos eixos de rotação, pelo que as discrepâncias nos momentos de inércia decorrem estritamente da diferença de peso entre os componentes suportados.
+
+O eixo de \emph{Pitch} constitui o elo mais interno da cadeia cinemática e suporta apenas o elemento mais leve do sistema: o sensor ótico, o laser e o seu suporte concêntrico imediato. Como a massa em rotação é reduzida, o momento de inércia equivalente refletido no motor de \emph{Pitch} ($J_{\text{pitch}}$) é minimizado.
+
+Por outro lado, o eixo de \emph{Yaw} (guinada) está posicionado na base da plataforma e atua como o elo externo que sustenta toda a estrutura móvel. Consequentemente, mesmo considerando a massa centrada, este motor tem de movimentar uma carga total consideravelmente superior, que engloba o peso combinado da câmara, do motor físico de \emph{Pitch} e estrutura central. Esta acumulação de componentes resulta numa massa global maior, traduzindo-se num momento de inércia significativamente mais elevado do que o do elo interno ($J_{\text{yaw}} \gg J_{\text{pitch}}$).
+
+Esta assimetria traduz-se diretamente nas constantes de tempo mecânicas de cada eixo ($\tau_m \approx J R_a / K_t K_b$). Dado que as características elétricas e as constantes eletromecânicas dos motores são análogas, o comportamento dinâmico é governado pela carga inercial, prevendo-se que o motor pitch apresente uma resposta temporal mais rápida e uma frequência de corte mais elevada, enquanto que o motor yaw apresentará uma resposta visivelmente mais lenta, com maior amortecimento inercial e menor largura de banda.
 
 
+\section{Identificação Experimental em Frequência}
+\label{subsec:identificacao_frequencia}
 
-
-%----------------------------------------------------------------------------------------
-
-\section{Arquitetura da Malha de Controlo}
-\label{sec:malha_controlo}
-
-Para que o \emph{gimbal} cumpra com eficácia a missão de neutralização de ameaças, o sistema de controlo deve satisfazer requisitos dinâmicos, tais como a garantia de um erro em regime permanente nulo face a entradas em rampa (seguimento de alvos a velocidade constante) e uma elevada capacidade de rejeição de perturbações externas. De modo a materializar estes objetivos, implementou-se uma arquitetura de controlo em malha fechada estruturada em cascata. Esta topologia é operacionalizada através da biblioteca \emph{SimpleFOC} para executar o \ac{FOC}, cujos fundamentos teóricos encontram-se detalhados no Enquadramento Teórico desta dissertação (Capítulo~\ref{ch:enquadramento_teorico}) \textbf{Devo descrever FOC no enquadramento teórico?}. O diagrama de blocos detalhado deste ciclo algorítmico encontra-se esquematizado na Figura~\ref{fig:diagrama_malha_controlo}.
+A caracterização dinâmica de cada conjunto motor e encoder do \emph{gimbal} foi efetuada recorrendo ao método de identificação experimental por varrimento de frequências. Operando em malha aberta sob controlo de tensão, desenvolveu-se uma aplicação dedicada em \emph{Python} encarregue de automatizar o processo de ensaio, gerar digitalmente os sinais de excitação e realizar o registo síncrono das formas de onda. Este programa injetou um sinal de excitação sinusoidal contínuo na entrada de tensão de quadratura ($V_q$), com uma amplitude controlada para evitar a saturação dos condutores, monitorizando em tempo real a resposta posicional do motor ($\Theta$) através das leituras do \emph{encoder} magnético MT6835. A interface gráfica desenvolvida para a configuração do varrimento, visualização em tempo real e exportação dos dados temporais encontra-se ilustrada na Figura~\ref{fig:software_python}.
 
 \begin{figure}[H]
     \centering
-    \includegraphics[width=\textwidth, keepaspectratio]{chapters/ch6_Controlo/assets/tese_controlo.pdf}
-    \caption[Diagrama de Blocos do Algoritmo de Controlo em Cascata]{Diagrama de blocos do ciclo de controlo em cascata do algoritmo FOC via \emph{SimpleFOC}.}
-    \label{fig:diagrama_malha_controlo}
+    \includegraphics[width=0.65\textwidth,keepaspectratio]{chapters/ch6_Controlo/assets/python_programa.png} % Ajusta o caminho e extensão da imagem
+    \caption[Interface da Aplicação de Aquisição em Python]{Interface gráfica da aplicação desenvolvida em \emph{Python} para aplicação e registo de formas de onda}
+    \label{fig:software_python}
 \end{figure}
 
-O ciclo de controlo em tempo real é instanciado no microcontrolador ESP32-S3 de forma determinística, sendo dividido em duas rotinas principais, a função \emph{move()} e a função \emph{focloop()}. 
-
-A execução inicia-se na função \emph{move()}, responsável pelo controlo de posição de nível superior. Nesta rotina, o valor de referência (\emph{setpoint}) de posição angular é comparado com o sinal de realimentação de posição do \emph{encoder} magnético MT6835. Para mitigar o ruído de alta frequência inerente à leitura digital, este sinal de retorno atravessa previamente um filtro passa-baixas digital de primeira ordem, gerando o erro de posição angular do eixo. Este erro posicional é multiplicado por um ganho proporcional de ângulo, sendo o resultado tratado como a referência de velocidade angular para a malha interna. Antes de transitar para a etapa seguinte, o sinal passa por um bloco de saturação que restringe a velocidade dentro dos limites físicos de segurança do \emph{gimbal}. 
-
-A velocidade de referência resultante é então comparada com a velocidade real do motor, calculada no instante de amostragem através da diferenciação numérica da posição do \emph{encoder} e filtrada por um segundo filtro passa-baixas. O erro de velocidade daí resultante é processado por um controlador PID de velocidade, cujo sinal de saída encerra a execução da função.
-
-A variável de atuação gerada pelo PID de velocidade entra, subsequentemente, na rotina de controlo vetorial de baixo nível, a função \texttt{loopFOC()}. Inicialmente, o sinal passa por um limitador para respeitar as especificações elétricas e de tensão da bateria, sendo convertido na tensão de referência do eixo de quadratura ($V_q$), a qual está diretamente relacionada com o binário mecânico do motor.
-
-O bloco matemático da transformada inversa de \emph{Park} e de \emph{Clarke} recebe a tensão $V_q$, a tensão no eixo direto ($V_d$) e o ângulo elétrico ($\theta_e$) e transformam em sinais direcionados às fases $A$, $B$ e $C$ do estator. Por fim, os sinais de comando digital atuam o \emph{driver} de potência (ponte inversora trifásica), completando o ciclo de controlo em tempo real.
-
-%----------------------------------------------------------------------------------------
-
-\section{Modelação e Identificação Experimental em Frequência}
-\label{subsec:identificacao_frequencia}
-
-Para projetar os controladores PID de forma analítica e garantir o cumprimento dos requisitos de estabilidade e seguimento, torna-se imperativo conhecer o modelo matemático que rege a dinâmica física de cada eixo do \emph{gimbal}. Para tal, optou-se por uma abordagem de modelação experimental baseada na resposta em frequência do sistema.
-
-O método de identidade consistiu na realização de um varrimento de frequências. Utilizando o controlo de tensão da biblioteca \emph{SimpleFOC}, injetou-se um sinal de excitação sinusoidal contínuo na entrada de tensão de quadratura ($V_q$), com uma amplitude controlada, varrendo um espetro desde frequências baixas até ao limite da largura de banda do atuador. Em cada patamar de frequência, a resposta do motor foi monitorizada em tempo real através do \emph{encoder} magnético MT6835.
-
-A partir da relação entre o sinal de excitação (entrada) e a resposta dinâmica do sistema (saída), procedeu-se ao levantamento do Diagrama de Bode. A análise gráfica deste comportamento experimental permitiu aproximar a dinâmica do eixo a uma Função de Transferência, $G(s)$, definida genericamente no domínio de Laplace pela Equação~\ref{eq:funcao_transferencia}:
-
-\begin{equation}
-    G(s) = \frac{\Theta(s)}{V_q(s)} = \frac{K}{s(\tau s + 1)} = \frac{K}{s^2\tau + s}
-    \label{eq:funcao_transferencia}
-\end{equation}
-
-Onde $K$ representa o ganho estático do sistema e $\tau$ corresponde à constante de tempo mecânica. A presença do integrador puro na Equação~\ref{eq:funcao_transferencia} reflete a integração da posição de forma naturar por estár a atuar na tensão que é diretamente proporcional à velocidade.
-
-De forma a caracterizar individualmente a resposta dinâmica de cada canal de atuação do \emph{gimbal}, o procedimento de varrimento de frequências foi executado de forma independente para o eixo de elevação (\emph{pitch}) e para o eixo de azimute (\emph{yaw}). Os diagramas de Bode obtidos experimentalmente encontram-se representados na Figura~\ref{fig:bode_identificacao_eixos}.
+Os limites do varrimento foram condicionados pelas restrições físicas do sistema de medição. A frequência mínima foi selecionada de modo a garantir, pelo menos, uma década de leitura antes da frequência de quebra do primeiro polo, assegurando a caracterização correta do ganho em baixas frequências. Por outro lado, fixou-se a frequência máxima em $50~\text{rad/s}$ para o eixo de \emph{pitch} e em $10~\text{rad/s}$ para o eixo de \emph{yaw}. Acima destes limiares, a atenuação severa da amplitude impossibilita a determinação precisa da fase e da magnitude do sinal de saída. Para o pós-processamento e extração dos pontos do diagrama de Bode, a determinação da razão de amplitudes e do atraso de fase baseou-se no método de deteção da passagem da onda por zero. Os diagramas de Bode obtidos experimentalmente encontram-se ilustrados na Figura~\ref{fig:bode_identificacao_eixos}.
 
 \begin{figure}[H]
     \centering
@@ -73,23 +91,92 @@ De forma a caracterizar individualmente a resposta dinâmica de cada canal de at
         \caption{Eixo de \emph{Yaw}.}
         \label{fig:sub_bode_yaw}
     \end{subfigure}
-    \caption[Diagramas de Bode Experimentais por Eixo]{Diagramas de Bode experimentais.}
+    \caption[Diagramas de Bode Experimentais por Eixo]{Diagramas de Bode obtidos por varrimento experimental.}
     \label{fig:bode_identificacao_eixos}
 \end{figure}
 
-A nível de frequutilizou-se 50 rad/s e 10 rad/s como frequência máxima de pitch e yaw, respetivamente, dado que a frequências maiores não é possível detetar com certeza a fase e o ruído do sensor. A frequência minima foi selecionada para obter pelo menos uma decada antes do polo por forma a obter a fase em cerca de 90º. 
+A análise analítica das curvas de magnitude e fase da Figura~\ref{fig:bode_identificacao_eixos} permite mapear a ordem e a estrutura do modelo dinâmico dos atuadores. Em baixas frequências, ambos os eixos exibem uma inclinação constante de $-20~\text{dB/década}$ no diagrama de magnitude, acompanhada por uma fase inicial estabilizada nos $-90^\circ$ (ou $270^\circ$). Este comportamento comprova a presença de um integrador puro na origem, o qual decorre diretamente do facto de a entrada do sistema ser uma tensão (proporcional ao binário e, por conseguinte, à velocidade angular) e a saída monitorizada ser a posição angular do veio.
 
-Os diagrama de bode obtido demonstra que ambos os motores apresentam uma fase de cerca de 90º graus em baixas frequencias dado polo presente na origem dado que o controlo em tensão é proporcional ao torque e que neste caso é diretamente convertido em velocidade.
-\textbf{falar sobre os resultados referindo que começão a 90/270 dado ter um polo na origem e um polo mecânico (n sei se abordo o polo elétrico que é dificil medir)}
+À medida que a frequência de excitação aumenta, observa-se uma inflexão na magnitude para um declive de $-40~\text{dB/década}$, acompanhada por uma queda progressiva de $90^\circ$ na fase desde a década anterior até à decada seguinte. Este fenómeno assinala a frequência de corte ($\omega_c$) correspondente ao polo mecânico do sistema. É de notar que, dentro da janela de frequências delimitada pelo ruído do sensor, não é visível qualquer transição adicional na inclinação ou na fase que denote a influência do polo elétrico. O polo elétrico localiza-se numa região de frequências muito superior, fora do espetro mensurável, o que valida empiricamente a omissão da dinâmica indutiva discutida na Secção anterior e confirma a adequação de um modelo simplificado de segunda ordem para a posição.
 
-\textbf{abordar a função de transferencia retirada de cada diagrama de bode}
+A partir da extração gráfica da frequência de corte mecânica ($\omega_c = 1/\tau$) e do ganho estático ($K$) em cada diagrama, a dinâmica de Laplace de cada eixo pode ser aproximada pela função de transferência genérica descrita na Equação~\ref{eq:funcao_transferencia_geral}:
+
+\begin{equation}
+    G(s) = \frac{\Theta(s)}{V_q(s)} = \frac{K}{s(\tau s + 1)} = \frac{K}{s^2\tau + s}
+    \label{eq:funcao_transferencia_geral}
+\end{equation}
+
+Substituindo os parâmetros específicos extraídos experimentalmente para as constantes de tempo e ganhos de cada canal, obtêm-se as funções de transferência numéricas para os eixos de \emph{pitch} e \emph{yaw}, expressas respetivamente pelas Equações~\ref{eq:tf_pitch_completa} e~\ref{eq:tf_pitch_completa}:
+
+\begin{equation}
+    G_{\text{pitch}}(s) = \frac{K_{\text{pole}}}{s(s + a_{\text{yaw}})} = \frac{254.9}{s(s + 19.51)} = \frac{K_{\text{yaw}}}{s(\tau_{\text{yaw}} s + 1)} = \frac{-13.065}{s(0.0513s + 1)}
+    \label{eq:tf_pitch_completa}
+\end{equation}
+
+\begin{equation}
+    G_{\text{pitch}}(s) = \frac{K_{\text{pole}}}{s(s + a_{\text{pitch}})} = \frac{13.85}{s(s + 1.807)} = \frac{K_{\text{pitch}}}{s(\tau_{\text{pitch}} s + 1)} = \frac{7.665}{s(0.553s + 1)}
+    \label{eq:tf_yaw_completa}
+\end{equation}
+
+Estas equações empíricas constituem a base matemática da planta, refletindo fielmente a resposta eletromecânica real de cada atuador, e serão utilizadas subsequentemente para o projeto, sintonização e simulação dos algoritmos de controlo em malha fechada.
 
 
-\section{Controlador de Seguimento}
+%----------------------------------------------------------------------------------------
 
-Com as funções de transferência identificadas através do ensaio em frequência, constata-se que a tensão de quadratura $V_q(s)$ é diretamente proporcional ao binário eletromecânico aplicado às fases estatóricas, e a posição angular final de $\Theta(s)$ se caracteriza como um sistema de Tipo 1, devido à presença do integrador puro intrínseco. De modo a capacitar o \emph{gimbal} para o seguimento rigoroso do \ac{UAV} a uma velocidade constante limite sem erros posicionais, caracterizando-se por seguimento em rampa, projetou-se uma arquitetura de controlo baseada num compensador Proporcional-Integral com Ação Derivativa na Realimentação(PI-D). Nesta topologia, a ação derivativa foi aplicada exclusivamente ao sinal de realimentação de velocidade e não ao sinal de erro posicional, uma estratégia que visa eliminar por completo o fenómeno de \emph{setpoint kick}, que consiste em picos abruptos e saturações violentas na variável de atuação sempre que a referência de trajetória sofre alterações súbitas ou degraus gerados pelo algoritmo de visão computacional. Para reduzir o ruído produzido na velocidade procedeu-se à integração de um filtro passa-baixas digital de primeira ordem diretamente acoplado ao bloco derivativo, atenuando a amplificação do ruído de alta frequência decorrente da diferenciação numérica do sinal do \emph{encoder} magnético, garantindo que apenas as variações dinâmicas reais da velocidade influenciem a ação de controlo. Apoiado no modelo paramétrico linearizado da planta obtido previamente via Diagrama de Bode, desenvolveu-se um modelo de simulação computacional em ambiente \emph{Simulink}, a aproximar o ambiente virtual à realidade física do protótipo, operando à discretização temporal com o delta t igual ao verificado no controle físico, integraram-se não-linearidades estritas no modelo de simulação, designadamente os limites de saturação de tensão impostos pela eletrónica de potência dos \emph{drivers} e a zona morta (\emph{dead-band}) induzida pelo atrito estático presente nos rolamentos e nos pontos de contacto da estrutura fabricada em manufatura aditiva. A sintonia final e a otimização dos ganhos do controlador foram executadas recorrendo à ferramenta \emph{PID Tuner} do \emph{MATLAB}, através da qual se testaram iterativamente múltiplos perfis de compensadores com filtro na derivada para a malha. O objetivo deste processo de otimização consistiu em encontrar um equilíbrio de desempenho que maximizasse a largura de banda e garantisse uma resposta transiente extremamente rápida face à dinâmica de fuga da ameaça, assegurando, em simultâneo, que a ação de comando calculada não forçasse a saturação contínua da tensão do motor, prevenindo fenómenos de instabilidade.
+\section{Arquitetura da Malha de Controlo}
+\label{sec:malha_controlo}
+A arquitetura de controlo desenvolvida para o posicionamento do \emph{gimbal} assenta numa estratégia de comutação de controladores baseada em limites de erro (\emph{error-triggered switching}). Esta abordagem permite segmentar a operação do sistema em duas tarefas distintas e sequenciais, otimizando de forma independente a fase de exploração do espaço e a fase de retenção precisa do feixe sobre a ameaça através de duas estruturas de controlo independentes.
+
+O primeiro estágio da arquitetura é constituído pelo controlo de varrimento, cuja função inicial é guiar o sistema através de trajetórias sistemáticas de busca no céu. Assim que o algoritmo de visão computacional identifica um \ac{UAV}, esta mesma estrutura atua de forma rápida para aproximar o alinhamento ótico da vizinhança imediata do alvo. Esta arquitetura necessita assegurar um erro nulo à entrada de um \emph{step}.
+
+A transição para o estágio subsequente ocorre de forma automática assim que o módulo do erro posicional instantâneo decresce abaixo de um limite de tolerância predefinido. Neste instante, o algoritmo desativa a estrutura em cascata e comuta para o controlo de seguimento. Este modo operacional baseia-se num controlador PI-D. Necessitando de uma resposta significativamente mais agressiva, projetada para assegurar um erro em regime permanente estritamente nulo perante entradas em rampa e uma resposta rápida por forma a cumprir com os requisitos de velocidade angular anteriormente referidos.
+
+\subsection{Controlador de Varrimento}
+\label{subsec:controlador_varrimento}
+
+Para o estágio de procura, implementou-se uma arquitetura de controlo em cascata, cuja estrutura detalhada está representada no diagrama de blocos da Figura~\ref{fig:diagrama_malha_controlo}. Esta topologia permite desacoplar a dinâmica de posicionamento da dinâmica de velocidade do motor, o que garante uma maior estabilidade global ao sistema através do amortecimento ativo da malha interna.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=\textwidth, keepaspectratio]{chapters/ch6_Controlo/assets/tese_controlo_varrimento.pdf}
+    \caption[Diagrama de Blocos do Algoritmo de Controlo em Cascata]{Diagrama de blocos do ciclo de controlo em cascata.}
+    \label{fig:diagrama_malha_controlo}
+\end{figure}
+
+Primeiramente, o erro posicional $e_{\theta}(t)$ é calculado através da diferença entre o sinal de referência desejado $\theta_{\text{ref}}(t)$ e a leitura atual do \emph{encoder} magnético MT6835. Este erro é multiplicado por um ganho puramente proporcional de ângulo $K_{p,\theta}$, gerando uma referência de velocidade mecânica $\omega_{\text{ref}}(t)$ que é submetida a um bloco de saturação de velocidade, resultando na expressão $\omega_{\text{ref}}(t) = \text{sat}(K_{p,\theta} \cdot e_{\theta}(t), \pm\omega_{\text{max}})$. De seguida, calcula-se a velocidade angular real do motor, aplicando-se um segundo filtro passa-baixas. O erro de velocidade resultante, definido por $e_{\omega}(t) = \omega_{\text{ref}}(t) - \omega_{\text{filtrado}}(t)$, é processado por um \ac{PID} por forma a gerar a tensão de quadratura de referência $V_q(t)$, que é limitada a 8 V para não aquecer excessivamente o motor. Passando em seguida por um bloco de transformada inversa de \emph{Park} e de \emph{Clarke}, que converte a tensão de quadratura $V_q(t)$ e a tensão no eixo direto $V_d(t)$ em sinais de comando para as fases $A$, $B$ e $C$ do estator. Por fim, estes sinais digitais são enviados para o \emph{driver} de potência, que atua a ponte inversora trifásica, completando o ciclo de controlo em tempo real.
+
+Sintonia do controlador e ensaios experimentais em desenvolvimento...
 
 
+
+%----------------------------------------------------------------------------------------
+
+\subsection{Controlador de Seguimento}
+
+Para o estágio de seguimento, implementou-se uma arquitetura baseada num controlador \ac{PID} direto. Conforme ilustrado no diagrama de blocos da Figura~\ref{fig:diagrama_malha_seguimento}, esta topologia prescinde da malha de velocidade intermédia utilizada no modo de varrimento. Ao processar o erro angular de forma direta para ditar a ação de controlo, o sistema obtém um erro em regime permanente estritamente nulo face a entradas em rampa.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=\textwidth, keepaspectratio]{chapters/ch6_Controlo/assets/tese_controlo_seguimento.pdf}
+    \caption[Diagrama de Blocos do Algoritmo de Controlo de Seguimento Direto]{Diagrama de blocos do controlo de seguimento.}
+    \label{fig:diagrama_malha_seguimento}
+\end{figure}
+
+Nesta configuração, o erro posicional instantâneo $e_{\theta}(t)$ é injetado diretamente no algoritmo PI-D. Nesta topologia, a ação derivativa é aplicada exclusivamente ao sinal de realimentação de velocidade e não ao sinal de erro posicional. Esta estratégia visa eliminar por completo o fenómeno de \emph{setpoint kick}, prevenindo picos abruptos e saturações violentas na variável de atuação sempre que a referência de trajetória sofre alterações súbitas ou degraus gerados pelo algoritmo de visão computacional. Adicionalmente, procedeu-se à integração de um filtro passa-baixas digital de primeira ordem diretamente acoplado ao bloco derivativo por forma a reduzir o ruído da derivação da posição. A ação combinada dos três termos gera a tensão de quadratura de referência $V_q(t)$, cuja dinâmica é calculada para impor acelerações imediatas ao rotor e fixar o feixe \emph{laser} no alvo. Uma vez que a camada de atuação de baixo nível e as restrições elétricas do \emph{gimbal} são idênticas às descritas na Subsecção~\ref{subsec:controlador_varrimento}, o sinal $V_q(t)$ é igualmente submetido ao teto de saturação de $8~\text{V}$ para proteção térmica do motor, seguindo diretamente para o bloco das transformadas inversas de Park e Clarke (com $V_d = 0$) para a modulação física das fases do estator.
+
+Apoiado na função de transferência identificada, desenvolveu-se um modelo de simulação computacional em ambiente \emph{Simulink}, apresentada na figura \ref{fig:modelo_simulink_Cseguimento}, para aproximar o comportamento virtual à realidade física do protótipo. O modelo operou com uma discretização temporal idêntica (0.001 s) à verificada no controlo físico e integrou não-linearidades estritas do sistema, designadamente os limites de saturação de tensão e a zona morta induzida pelo atrito estático presente nos rolamentos e nos pontos de contacto da estrutura fabricada em manufatura aditiva.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=\textwidth, keepaspectratio, trim=0cm 5cm 0cm 5cm, clip]{chapters/ch6_Controlo/assets/simulink_contolo_seguimento.pdf}
+    \caption[Diagrama de Blocos do Algoritmo de Controlo de Seguimento Direto]{Modelo em \emph{Simulink} com controlo de seguimento.}
+    \label{fig:modelo_simulink_Cseguimento}
+\end{figure}
+
+A sintonia final e a otimização dos ganhos do controlador foram executadas recorrendo à ferramenta \emph{PID Tuner} do \emph{MATLAB} para um sinal de degrau de $1^\circ$. Através desta plataforma, testaram-se iterativamente múltiplos perfis com o objetivo de priorizar a robustez do sistema, ajustando o controlador para minimizar a sobre-elevação (\emph{overshoot}) e evitar oscilações prejudiciais à estabilização da imagem. A velocidade de resposta do controlador foi incrementada progressivamente até que o sinal de atuação estimado em simulação atingisse picos de aproximadamente $6~\text{V}$. Esta escolha foi deliberada para salvaguardar uma margem de segurança operacional estável face ao limite de saturação física de $8~\text{V}$ do \emph{hardware}. Este processo de otimização permitiu encontrar o equilíbrio ideal, maximizando a largura de banda e garantindo uma resposta transiente extremamente rápida para acompanhar a dinâmica de fuga da ameaça, assegurando, em simultâneo, que a ação de comando calculada não force a saturação contínua do motor, prevenindo fenómenos de instabilidade.
+
+
+Ensaios experimentais em desenvolvimento...
 
 %\begin{equation}
 %    G_{pitch}(s) = \frac{\Theta_{pitch}(s)}{V_q(s)} = \frac{K}{s^2 + \frac{1}{\tau}s} =\frac{0.0}{s^2 + 0.0s}
@@ -98,31 +185,12 @@ Com as funções de transferência identificadas através do ensaio em frequênc
 
 %----------------------------------------------------------------------------------------
 
-\section{Ensaios Experimentais do Controlador}
-\label{sec:ensaios_pid}
+% \begin{figure}[H]
+% \centering
+% \includegraphics[width = 0.5\textwidth, keepaspectratio]{chapters/ch6_Controlo/assets/distancia_ensaio_laser.png}
+% \caption[A]{An }
+% \label{fig:dis}
+% \end{figure}
 
-%Com base nas funções de transferência experimentais obtidas na secção anterior, procedeu-se ao cálculo analítico dos parâmetros do controlador PID em cascata para ambos os eixos (\emph{pitch} e \emph{yaw}). Esta secção detalha a validação prática do comportamento dinâmico do sistema em bancada de ensaios.
 
-\subsection{Resposta ao Degrau (Step Response)}
-\label{subsec:resposta_degrau}
-% Aqui deves descrever o ensaio de resposta a uma mudança abrupta de posição.
-% Analisa graficamente os parâmetros: Overshoot (sobre-sinal), Rise Time (tempo de subida) e Settling Time (tempo de estabelecimento).
 
-\subsection{Seguimento de Trajetória Dinâmica (Onda Triangular)}
-\label{subsec:onda_triangular}
-% Aqui deves descrever o ensaio com a onda triangular.
-% Explica que a onda triangular mimetiza um alvo a mover-se com velocidade angular constante (entrada em rampa)
-% e demonstra como o controlador lida com o erro em rampa e com as inversões abruptas de sentido de rotação.
-
-\subsection{Resolução Máxima Experimental}
-\label{subsec:resolucao_maxima}
-\textbf{Posso deixar aqui? ou não faz sentido abordar o ensaio da resolução aqui?}
-% Aqui deves apresentar os resultados do teste limite de resolução.
-% Qual foi o menor degrau angular (em frações de grau ou radianos) que o gimbal conseguiu detetar, processar e corrigir de forma estável, validando o uso do encoder de 21 bits.
-
-\begin{figure}[H]
-\centering
-\includegraphics[width = 0.5\textwidth, keepaspectratio]{chapters/ch6_Controlo/assets/distancia_ensaio_laser.png}
-\caption[A]{An }
-\label{fig:dis}
-\end{figure}
