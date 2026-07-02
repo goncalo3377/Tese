@@ -329,17 +329,17 @@
                  </item>
                  <item>
                   <property name="text">
-                   <string>Seno (tensão)</string>
+                   <string>Seno</string>
                   </property>
                  </item>
                  <item>
                   <property name="text">
-                   <string>Quadrada (tensão)</string>
+                   <string>Quadrada</string>
                   </property>
                  </item>
                  <item>
                   <property name="text">
-                   <string>Triangular (tensão)</string>
+                   <string>Triangular</string>
                   </property>
                  </item>
                 </widget>
