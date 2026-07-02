@@ -1,0 +1,229 @@
+% Capítulo 1
+% 
+\chapter{Enquadramento Teórico} % Título do capítulo
+\label{chap:Enquadramento_Teorico} % Para fazer referência a esta secção ao longo da dissertação, use o comando Chapter~\ref{Chapter1}
+
+\section{Atuação Mecânica e Dinâmica}
+
+
+O processo de seleção e dimensionamento de motores para sistemas de posicionamento é essencial para que os sistema \emph{gimbal} acompanhe o alvo garantido a dinâmica necessária.
+
+
+A dinâmica de rotação dos eixos de \emph{pitch} e \emph{yaw} é regida pela segunda lei de Newton. De acordo com o livro de \cite{Handbook2007}, o binário total ($T$) necessário para aplicar uma aceleração angular ($\alpha$) é definido por:
+
+\begin{equation}
+    T = I_{total} \alpha + T_{ext},
+\end{equation}
+\myequations{Equação da Dinâmica Rotacional do \emph{Gimbal}}
+
+onde $I_{total}$ é a soma das inércias do motor ($I_M$) e da carga ($I_L$) e $T_{ext}$ representa binários de atrito ou desequilíbrio. 
+
+Para maximizar a transferência de potência e a aceleração, a inércia da carga deve ser equiparável com a do motor. Em sistemas com transmissão, como servo motores, a inércia da carga refletida no veio do motor ($I_{ref}$) é influenciada pela relação de transmissão ($n$) (\cite{bolton2018}):
+
+\begin{equation}
+    I_{ref} = \frac{I_L}{n^2}.
+\end{equation}
+\myequations{Inércia da Carga Refletida no Veio do Motor}
+
+Conforme demonstrado por \cite{bolton2018}, a resposta dinâmica ideal ocorre quando $I_M = I_{ref}$, desta forma é assegurado a estabilidade do controlo e evita falhas de seguimento em alvos de elevada velocidade angular.
+
+\section{Cinemática num \emph{Gimbal} (Yaw-Pitch)}
+
+A integração entre o sistema de visão e a atuação mecânica exige a resolução do problema da cinemática inversa. Enquanto a visão computacional determina a posição do alvo no espaço cartesiano, a cinemática inversa traduz essa localização nos estados angulares dos atuadores.
+
+De acordo com o modelo de \cite{equations2001}, a relação entre o referencial da base e o do sensor é estabelecida pela composição das matrizes de rotação de \emph{yaw} ($L_{KB}$) e \emph{pitch} ($L_{AK}$). Para que o \emph{gimbal} aponte corretamente, o vetor alvo no referencial da base deve ser mapeado para o referencial do sensor de modo a que as suas componentes transversais sejam nulas (\cite{equations2001}; \cite{bolton2018}).  A transformação de coordenadas do referencial da base para o referencial da câmara é realizada através da aplicação sucessiva das matrizes de rotação de azimute e elevação definidas por \cite{equations2001}:
+
+\begin{equation}
+    \vec{P}_A = L_{AK}(\phi_2) \cdot L_{KB}(\phi_1) \cdot \vec{P}_B.
+\end{equation}
+\myequations{Transformação de Coordenadas entre os Referenciais}
+Substituindo pelas matrizes elementares, a relação completa é estabelecida por:
+
+\begin{equation}
+    \begin{bmatrix} x_A \\ y_A \\ z_A \end{bmatrix} = 
+    \begin{bmatrix} \cos\phi_2 & 0 & -\sin\phi_2 \\ 0 & 1 & 0 \\ \sin\phi_2 & 0 & \cos\phi_2 \end{bmatrix}
+    \begin{bmatrix} \cos\phi_1 & \sin\phi_1 & 0 \\ -\sin\phi_1 & \cos\phi_1 & 0 \\ 0 & 0 & 1 \end{bmatrix}
+    \begin{bmatrix} x \\ y \\ z \end{bmatrix}
+\end{equation}
+\myequations{Transformação de Coordenadas entre os Referenciais Expandida}
+Partindo das matrizes de rotação definidas no modelo dinâmico:
+
+\begin{equation}
+    L_{KB}(\phi_1) = \begin{bmatrix} \cos\phi_1 & \sin\phi_1 & 0 \\ -\sin\phi_1 & \cos\phi_1 & 0 \\ 0 & 0 & 1 \end{bmatrix}, \quad 
+    L_{AK}(\phi_2) = \begin{bmatrix} \cos\phi_2 & 0 & -\sin\phi_2 \\ 0 & 1 & 0 \\ \sin\phi_2 & 0 & \cos\phi_2 \end{bmatrix}
+\end{equation}
+\myequations{Definição das Matrizes Elementares de Rotação em Azimute e Elevação}
+
+
+No cálculo do \emph{yaw} ($\phi_1$), a rotação deve alinhar o plano de simetria do \emph{gimbal} com o alvo, o que implica que a componente lateral no referencial intermédio (após a rotação em \emph{yaw}) seja nula. Aplicando a matriz de rotação $L_{KB}$ ao vetor posição da base $\vec{P}_B = [x, y, z]^T$, a referida condição de alinhamento traduz-se na equação $-x\sin\phi_1 + y\cos\phi_1 = 0$, da qual se deduz a primeira lei de comando:
+\begin{equation}\phi_{1} = \text{atan2}(y, x)\end{equation}
+\myequations{Equação de Alinhamento do Ângulo de Azimute}
+
+Esta relação permite garantir que o sistema neutralize o erro de azimute independentemente do quadrante onde o UAV se encontre (\cite{equations2001}). Uma vez fixado o plano de \emph{yaw}, o alvo passa a residir no plano vertical do sensor, permitindo o cálculo de \emph{pitch} ($\phi_2$). Nesta etapa, a rotação de \emph{pitch} deve compensar a cota $z$ do alvo em relação à sua projeção no plano horizontal, dada pela norma $d = \sqrt{x^2 + y^2}$. Ao aplicar a matriz de rotação de elevação $L_{AK}$ sobre o vetor já transformado, a condição de erro vertical nulo impõe que a projeção do alvo no eixo $Z_A$ da câmara seja zero, resultando na expressão:
+\begin{equation}\phi_{2} = \text{atan2}(-z, \sqrt{x^2 + y^2})\end{equation}
+\myequations{Equação para o Alinhamento do Ângulo de Elevação}
+
+Assim, obtém-se o comando de elevação que fecha o ciclo de mapeamento geométrico (\cite{equations2001}). Conforme enfatizado por \cite{bolton2018}, a implementação destas soluções através da função \emph{atan2} é fundamental para a robustez do \emph{software} de controlo, pois assegura a unicidade da solução angular e evita descontinuidades matemáticas durante o seguimento de alvos em trajetórias dinâmicas. Por fim, importa salientar que a dinâmica deste mapeamento introduz uma sensibilidade variável na velocidade angular de \emph{yaw} ($\dot{\phi}_1$), descrita pela relação:
+
+\begin{equation}\dot{\phi}_1 = \omega_z \sec\phi_2\end{equation}\myequations{Relação de Sensibilidade da Velocidade Angular de Azimute em Função da Elevação},
+
+o motor de azimute aumenta drasticamente à medida que o alvo se aproxima da vertical do sistema, definindo os limites operacionais do \emph{gimbal}.
+
+\section{Controlo}
+
+Um sistema de controlo em malha fechada caracteriza-se pela utilização da realimentação (feedback) para reduzir o erro do sistema. Conforme definido por Nise \cite{nise2019control}, a configuração de malha fechada permite que o sistema compense perturbações externas e variações nos parâmetros dos componentes, algo fundamental num \emph{gimbal} sujeito a vibrações. O sinal de erro, $e(t)$, que alimenta o controlador, é definido pela diferença entre o sinal de referência $r(t)$ e a saída medida $c(t)$:
+\begin{equation}e(t) = r(t) - c(t).\end{equation}
+\myequations{Definição de Erro}
+
+Para processar este erro, utiliza-se o controlador proporcional integral derivativo (PID). De acordo com \cite{bolton2018}, a ação de controlo $u(t)$ resulta da soma ponderada de três termos distintos:
+\begin{equation}u(t) = K_p e(t) + K_i \int_{0}^{t} e(\tau) d\tau + K_d \frac{de(t)}{dt},\end{equation}
+\myequations{Controlador Proporcional-Integral-Derivativo (PID)}
+o ganho Proporcional ($K_p$) reduz o tempo de subida mas não elimina o erro residual, o ganho Integral ($K_i$) é responsável por eliminar o erro em regime estacionário e o ganho Derivativo ($K_d$) aumenta o amortecimento do sistema, reduzindo a sobre-elevação e melhorando a resposta transitória face a movimentos bruscos do UAV (\cite{nise2019control}; \cite{bolton2018}).
+
+Segundo \cite{nise2019control}, o desempenho de um sistema de controlo é quantificado por métricas no domínio do tempo que definem a rapidez e a estabilidade da resposta:
+\begin{itemize}
+    \item Tempo de Subida ($T_r$): Tempo necessário para que a resposta vá de 10\% a 90\% do valor final, indicando a rapidez do \emph{gimbal} em reagir ao alvo.
+    \item Sobre-elevação (\%): O valor que a resposta excede o valor final, expresso em percentagem. Uma sobre elevado pode causar a perda de contacto visual com o alvo.
+    \item Tempo de Estabelecimento ($T_s$): Tempo necessário para que as oscilações da resposta entrem e permaneçam dentro de uma banda de erro (5\%) do valor final.
+    \item Erro em Regime Estacionário ($e_{ss}$): A diferença entre a entrada e a saída quando o tempo tende para infinito, representando a exatidão estática do apontamento.
+\end{itemize}
+
+\section{Geometria da Visão e Calibração}
+
+Para que o sistema consiga localizar o alvo, é necessário descrever matematicamente como a câmara projeta a cena tridimensional no sensor digital. Esta relação entre o espaço 3D e os píxeis da imagem é definido pelos conjuntos de parâmetros extrínsecos e os parâmetros intrínsecos (\cite{szeliski2022}).
+
+\subsection{Parâmetros Extrínsecos}
+Os parâmetros extrínsecos definem a pose da câmara em relação ao referencial do mundo. De acordo com \cite{szeliski2022}, esta transformação de corpo rígido é expressa por uma matriz de transformação homogénea, $M_{ext}$, que combina uma submatriz de rotação ($R$) e um vetor de translação ($t$):
+\begin{equation}
+M_{ext} = \begin{bmatrix} 
+R_{3 \times 3} & \mathbf{t}_{3 \times 1} \\ 
+\mathbf{0}_{1 \times 3} & 1 
+\end{bmatrix}.
+\end{equation}
+\myequations{Matriz de Transformação Homogénea dos Parâmetros Extrínsecos}
+
+Esta matriz é fundamental para converter as coordenadas do drone detetado pela visão no referencial da câmara para o referencial da base, permitindo que com a cinemática inversa, discutida anteriormente, seja possível calcular os ângulos de atuação necessários \cite{szeliski2022}.
+
+\subsection{Parâmetros Intrínsecos} 
+
+A projeção da cena 3D para o plano da imagem é idealizada através do modelo de câmara \emph{pinhole}. Este modelo assume que a luz atravessa um centro ótico infinitesimal, estabelecendo uma relação de semelhança de triângulos entre as coordenadas espaciais e a sua projeção. \cite{OpenCV} demonstra que a transição para o sensor digital introduz a necessidade de considerar a distância focal ($f$) e o ponto principal ($c_x, c_y$), resultando na matriz de parâmetros intrínsecos, $M$:
+
+\begin{equation}
+M = \begin{bmatrix} 
+f_x & 0 & c_x \\ 
+0 & f_y & c_y \\ 
+0 & 0 & 1 
+\end{bmatrix}
+\end{equation}
+\myequations{Matriz de Parâmetros Intrínsecos da Câmara}
+
+A projeção final de um ponto tridimensional $Q = [X, Y, Z]^T$ para coordenadas de píxeis é dada pelo produto das matrizes intrínseca e extrínseca:
+
+\begin{equation}
+\begin{bmatrix}
+w \cdot x_s \\
+w \cdot y_s \\
+w
+\end{bmatrix} = 
+\begin{bmatrix} 
+f_x & 0 & c_x & 0 \\ 
+0 & f_y & c_y & 0 \\ 
+0 & 0 & 1 & 0 
+\end{bmatrix}
+\begin{bmatrix} 
+r_{11} & r_{12} & r_{13} & t_x \\ 
+r_{21} & r_{22} & r_{23} & t_y \\ 
+r_{31} & r_{32} & r_{33} & t_z \\ 
+0 & 0 & 0 & 1 
+\end{bmatrix}
+\begin{bmatrix} 
+X \\ 
+Y \\ 
+Z \\ 
+1 
+\end{bmatrix}
+\end{equation}
+\myequations{Conversão de um Ponto Tridimensional para o Plano de Imagem}
+
+\subsection{Distorção de Lente e Calibração} 
+
+Apesar da utilidade do modelo \emph{pinhole}, as câmaras reais utilizam sistemas de lentes para maximizar a entrada de luz, o que introduz distorções geométricas. \cite{OpenCV} identifica dois tipos principais de distorção: a radial, que curva as linhas retas nas extremidades da imagem devido à forma da lente, e a tangencial, resultante de um desalinhamento físico entre a lente e o plano do sensor. A correção da distorção radial é tipicamente modelada por uma série de Taylor, onde as coordenadas corrigidas $(x_c, y_c)$ dependem de coeficientes de distorção $k_1, k_2$:
+
+\begin{equation}
+    x_c = x(1 + k_1 r^2 + k_2 r^4 + ...), \quad y_c = y(1 + k_1 r^2 + k_2 r^4 + ...).
+\end{equation}
+\myequations{Correção da 
+Distorção Radial das Lentes}
+
+Para mitigar estes erros e garantir que o cálculo da posição do drone apresente o rigor necessário, aplica-se o método de calibração de Zhang. Este procedimento recorre a padrões geométricos conhecidos (tabuleiro de xadrez) para estimar tanto a matriz intrínseca $M$ como os coeficientes de distorção (\cite{OpenCV}).
+
+
+
+
+\section{Deteção de Objetos baseada em Redes Neuronais}
+
+A evolução da visão computacional permitiu a transição da extração manual de características para a aprendizado profundo (\emph{Deep Learning}), onde as CNNs assumem o papel principal. Segundo \cite{szeliski2022}, o diferencial das CNNs reside na sua capacidade de aprender automaticamente hierarquias de características visuais diretamente dos pixéis, eliminando a subjetividade inerente aos filtros desenhados manualmente.
+
+\subsection{Extração de Características}
+
+O funcionamento de uma rede de deteção assenta na operação matemática de convolução. Através da aplicação de múltiplos filtros (\emph{kernals}) que percorrem a imagem, a rede é capaz de extrair mapas de características que realçam padrões relevantes. Matematicamente, a convolução entre uma imagem $I$ e um filtro $K$ num ponto $(i, j)$ é definida por \cite{szeliski2022}:
+
+\begin{equation}
+(I * K)(i, j) = \sum_{m} \sum_{n} I(i-m, j-n) K(m, n).
+\end{equation}
+\myequations{Operação de Convolução Discreta}
+
+Ao longo das sucessivas camadas da rede, estes padrões tornam-se progressivamente mais complexos. Enquanto as camadas iniciais identificam elementos básicos como arestas e gradientes, as camadas profundas sintetizam estas informações para reconhecer estruturas específicas do alvo, como a geometria do corpo e das hélices de um UAV (\cite{szeliski2022}).
+
+\subsection{Arquiteturas de Único Estágio}
+
+Para sistemas que exigem resposta em tempo real, como o seguimento de drones por um \emph{gimbal}, destacam-se os detetores de passo único (\emph{one-stage detectors}), sendo a arquitetura YOLO (\emph{You Only Look Once}) a referência atual. Szeliski \cite{szeliski2022} descreve que estas redes tratam a deteção como um problema de regressão único, mapeando os pixéis da imagem diretamente para probabilidades de classe e coordenadas de caixas delimitadoras.
+
+Nesta abordagem, a rede prevê, para cada deteção, um vetor de estado $y$ que condensa toda a informação necessária para o sistema de controlo:
+
+\begin{equation}
+\mathbf{y} = [p_c, b_x, b_y, b_h, b_w, c]^T
+\end{equation}
+\myequations{Vetor de Estado da Deteção}
+
+Onde $p_c$ representa o grau de confiança da existência do objeto, $(b_x, b_y, $ $b_h, b_w)$ definem a geometria da \emph{bounding box} e $c$ a classificação do alvo (\cite{szeliski2022}).
+
+
+% \section{Propagação Laser e Interação Atmosférica}
+
+% A exatidão de um sistema de designação e seguimento laser é intrinsecamente limitada pelas propriedades físicas do canal ótico. Segundo \cite{andrews2005}, a atmosfera não é um meio passivo, mas sim um meio aleatório que degrada a coerência espacial e temporal do feixe através de três fenómenos principais: atenuação, divergência e turbulência.
+
+% A perda de potência de um feixe laser ao longo de uma distância $L$ é causada pela absorção. Este fenómeno de extinção é regido pela Lei de Beer-Lambert, que descreve a intensidade recebida $I(L)$ em função da intensidade inicial $I_0$ e do coeficiente de extinção total $\sigma$ (\cite{andrews2005}):
+
+% \begin{equation}
+%     I(L) = I_0 \exp(-\sigma L)
+%     \label{eq:beer_lambert}
+% \end{equation}
+% \myequations{Lei de Beer-Lambert}
+
+% onde $\sigma$ representa a soma dos coeficientes de absorção e espalhamento. Para sistemas operando em ambientes reais, a escolha do comprimento de onda ($\lambda$) é fundamental para minimizar estas perdas, tirando partido das janelas de transmissão atmosférica onde a absorção por vapor de água e $CO_2$ é reduzida.
+
+% Mesmo na ausência de turbulência, um feixe laser real sofre uma expansão angular natural devido à difração. De acordo com \cite{andrews2005}, o raio do feixe $W(L)$ a uma distância $L$ é dado por:
+
+% \begin{equation}
+% W(L) = W_0 \sqrt{1 + \left( \frac{L}{L_R} \right)^2},
+% \end{equation}
+% \myequations{Divergência do Feixe por Difração}
+% nesta expressão, $W_0$ é o diâmetro do feixe (\emph{beam waist}) no plano de saída e $L_R = \pi W_0^2 / \lambda$ é a distância de Rayleigh. Esta divergência define o limite inferior do tamanho da mancha laser (\emph{spot size}) no alvo, afetando a densidade de energia depositada no UAV.
+
+% A turbulência atmosférica introduz variações no índice de refração do ar, quantificadas pelo parâmetro $C_n^2$. Segundo Andrews e Phillips \cite{andrews2005}, esta instabilidade manifesta-se em dois fenómenos críticos para o seguimento: a cintilação e o \emph{beam wander}. A cintilação caracteriza-se por flutuações na intensidade do feixe resultantes de interferências de fase, sendo modelada pela variância de Rytov ($\sigma_1^2$):
+
+% \begin{equation}
+% \sigma_1^2 = 1.23 C_n^2 k^{7/6} L^{11/6}
+% \end{equation}
+% \myequations{Variância de Rytov}
+
+% Simultaneamente, o \emph{beam wander} provoca o desvio aleatório do centro do feixe em relação ao eixo ótico. A variância do deslocamento angular $\langle \theta_c^2 \rangle$ é aproximada por \cite{andrews2005}:
+
+% \begin{equation}
+% \langle \theta_c^2 \rangle \approx 2.91 C_n^2 L D^{-1/3}
+% \end{equation}
+% \myequations{Variância do Deslocamento Angular} 
+
+
+% Estes efeitos impõem um erro de posição dinâmico no feixe incidente não garantindo a estabilidade do feixe sobre o alvo.

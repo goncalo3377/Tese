@@ -1,0 +1,27 @@
+\contentsline {myequations}{\numberline {1.1}Latência Total do Sistema}{3}{equation.8}%
+\contentsline {myequations}{\numberline {1.2}Requisito de Velocidade Angualar}{3}{equation.9}%
+\contentsline {myequations}{\numberline {2.1}Equação da Dinâmica Rotacional do \emph {Gimbal}}{7}{equation.16}%
+\contentsline {myequations}{\numberline {2.2}Inércia da Carga Refletida no Veio do Motor}{7}{equation.17}%
+\contentsline {myequations}{\numberline {2.3}Transformação de Coordenadas entre os Referenciais}{8}{equation.19}%
+\contentsline {myequations}{\numberline {2.4}Transformação de Coordenadas entre os Referenciais Expandida}{8}{equation.20}%
+\contentsline {myequations}{\numberline {2.5}Definição das Matrizes Elementares de Rotação em Azimute e Elevação}{8}{equation.21}%
+\contentsline {myequations}{\numberline {2.6}Equação de Alinhamento do Ângulo de Azimute}{9}{equation.22}%
+\contentsline {myequations}{\numberline {2.7}Equação para o Alinhamento do Ângulo de Elevação}{9}{equation.23}%
+\contentsline {myequations}{\numberline {2.8}Relação de Sensibilidade da Velocidade Angular de Azimute em Função da Elevação}{9}{equation.24}%
+\contentsline {myequations}{\numberline {2.9}Definição de Erro}{10}{equation.26}%
+\contentsline {myequations}{\numberline {2.10}Controlador Proporcional-Integral-Derivativo (PID)}{10}{equation.27}%
+\contentsline {myequations}{\numberline {2.11}Matriz de Transformação Homogénea dos Parâmetros Extrínsecos}{11}{equation.30}%
+\contentsline {myequations}{\numberline {2.12}Matriz de Parâmetros Intrínsecos da Câmara}{11}{equation.32}%
+\contentsline {myequations}{\numberline {2.13}Conversão de um Ponto Tridimensional para o Plano de Imagem}{11}{equation.33}%
+\contentsline {myequations}{\numberline {2.14}Correção da Distorção Radial das Lentes}{12}{equation.35}%
+\contentsline {myequations}{\numberline {2.15}Operação de Convolução Discreta}{13}{equation.38}%
+\contentsline {myequations}{\numberline {2.16}Vetor de Estado da Deteção}{13}{equation.40}%
+\contentsline {myequations}{\numberline {5.1}Tensão de fase A do motor \ac {BLDC}}{30}{equation.66}%
+\contentsline {myequations}{\numberline {5.2}Tensão de fase B do motor \ac {BLDC}}{30}{equation.67}%
+\contentsline {myequations}{\numberline {5.3}Tensão de fase C do motor \ac {BLDC}}{30}{equation.68}%
+\contentsline {myequations}{\numberline {5.4}Binário eletromagnético do motor \ac {BLDC}}{30}{equation.69}%
+\contentsline {myequations}{\numberline {5.5}Equação elétrica do motor \ac {DC} simples}{31}{equation.70}%
+\contentsline {myequations}{\numberline {5.6}Equação mecânica do motor \ac {DC} simples}{31}{equation.71}%
+\contentsline {myequations}{\numberline {5.7}Função de transferência genérica do sistema de posicionamento}{35}{equation.75}%
+\contentsline {myequations}{\numberline {5.8}Função de transferência do eixo de \emph {Pitch}}{35}{equation.76}%
+\contentsline {myequations}{\numberline {5.9}Função de transferência do eixo de \emph {Yaw}}{35}{equation.77}%

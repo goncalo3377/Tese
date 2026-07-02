@@ -1,26 +1,61 @@
 \begin{introduction}
-%\label{chap:introduction}
+\label{chap:introduction}
 %Escreva aqui a introdução
+O conceito de Veículos Aéreos Não Tripulados (UAV) redefiniu os paradigmas do conflito moderno, conferindo vantagens táticas sem precedentes a forças atacantes através de plataformas de baixo custo e elevada eficácia (\cite{rogers2023second}). Neste contexto, os sistemas laser apresentam-se como uma solução disruptiva, oferecendo uma capacidade de resposta à velocidade da luz, exatidão milimétrica e um custo operacional marginal.
 
-A introdução prepara o leitor para uma leitura organizada e uma melhor compreensão do trabalho científico que se está a apresentar. Deve por isso começar por apresentar, de forma breve, a problemática em que se insere o trabalho científico.
+\section{Contexto Geral e Motivação}
+UAS alteram a dinâmica do campo de batalha, proporcionando uma superioridade operacional decisiva em cenários de guerra moderna (\cite{molloy2024drones}). Em teatros de operações contemporâneos, a utilização intensiva de táticas de enxame (\emph{swarms}) visa especificamente a saturação da capacidade de resposta dos sistemas defensivos convencionais. Esta estratégia é materializada no atual conflito entre a Rússia e a Ucrânia, onde se registou a projeção de mais de 50000 drones pelas forças russas apenas em 2025 (\cite{Jensen2025}). Tal volume operacional torna-se economicamente sustentável devido ao custo unitário de fabrico destes instrumentos, estimado em cerca de 50k USD (\cite{Anokhin2025}). Neste cenário, a interceção baseada em projéteis balísticos revela limitações críticas que, devido à reduzida secção eficaz de radar (RCS) e as dimensões físicas dos alvos, aliadas à sua elevada capacidade de manobra, dificultam as soluções de tiro preditivas (\cite{sedivy2021drone}). Ao contrário de um sistema guiado, uma munição balística segue uma trajetória determinística após o disparo, impossibilitando a compensação de alterações no vetor de estado do alvo durante o tempo de voo. Assim sendo, projéteis balísticos apresentam uma menor probabilidade de neutralização contra drones e a solução convencional recai sobre a utilização de mísseis com sistemas de guiamento ativo, com capacidade para corrigir a trajetória por forma a intercetar a ameaça. Esta abordagem impõe um desafio a nível logístico dado que o número de mísseis disponíveis normalmente situa-se na ordem das dezenas de unidades, tornando-a vulnerável à saturação por enxames. Adicionalmente, verifica-se uma assimetria de custos, o custo unitário de um míssil é de ordens de grandeza superior ao de um drone comercial adaptado, sendo desfavorável economicamente para o defensor. 
 
-Sempre que for necessário fazer este enquadramento de forma detalhada e mais longa, deve apenas referir-se o assunto na introdução indicando que a apresentação mais detalhada será feita num dos primeiros capítulos (normalmente o primeiro).
+Uma possível resposta tecnológica para superar estas limitações reside na adoção de sistemas laser. Uma das vantagem desta abordagem é que, devido à propagação do feixe ser à velocidade da luz, o tempo de voo é praticamente nulo. Para ilustrar a disparidade temporal, considere-se uma interceção a uma distância de $1000\,m$. Enquanto que o laser atinge o alvo quase instantaneamente, um projétil cinético convencional (como uma munição de $100\,mm$ a $870\,m/s$) demora mais de 1 segundo a chegar ao destino. Esse atraso do projétil exige a previsão da posição futura do alvo com uma antecedência considerável, o que permite que uma manobra evasiva invalide a solução de tiro calculada no instante $t_0$. Em contraste, a interação do laser é quase instantânea, pelo que o sistema deixa de necessitar de algoritmos de predições balísticas de longo prazo, exigindo apenas algoritmos de rastreio (\emph{tracking}) capazes de compensar a dinâmica do alvo em tempo real. Adicionalmente, este sistema apresenta a vantagem logística de utilizar a energia elétrica gerada pela própria plataforma. Ao eliminar a dependência de um número finito de projéteis armazenados, o laser oferece uma capacidade de disparo virtualmente ilimitada e um custo operacional significativamente reduzido. Simultaneamente, a exatidão ótica do feixe permite concentrar a energia num ponto específico, garantindo a neutralização do alvo sem causar os danos colaterais típicos das cargas explosivas ou cinéticas. A conjugação da resposta instantânea com a eficiência logística posiciona, assim, os sistemas laser como uma solução vital para os desafios da guerra assimétrica moderna.
 
-Feita, contudo, esta apresentação do assunto, expondo a problemática subjacente ao mesmo, deve apresentar-se o problema, ou problemas, objeto do estudo efetuado, a que se segue uma explicação das vias seguidas na investigação e da forma como elas transparecem na estrutura adotada para a apresentação. 
-
-Seguem-se, se forem relevantes e necessárias, algumas explicações sobre a metodologia do trabalho, terminando com os objetivos que se pretende alcançar. 
-
-Sempre que for necessário, para uma melhor compreensão por parte do leitor, pode dividir-se a introdução em pequenos subcapítulos, indicando objetivos, vias seguidas na investigação, metodologias e resultados pretendidos.
-
-
-\section{Motivação}
 
 \section{Definição do Problema}
 
-\section{Objetivo da dissertação}
-
-\section{Estrutura da dissertação}
+Atualmente, a Marinha Portuguesa não dispõe de sistemas de energia direcionada, o que resulta numa lacuna de capacidade face a ameaças assimétricas, nomeadamente enxames de drones e embarcações de alta velocidade, resultando num rácio de custo-benefício desfavorável caso sejam utilizados meios de defesa cinéticos tradicionais. A inexistência de uma plataforma experimental impede a validação técnica e operacional destas soluções em ambiente marítimo. Neste contexto, justifica-se o desenvolvimento de um protótipo funcional de um sistema laser capaz de mitigar as referidas vulnerabilidades. Desta forma, o desafio central reside no projeto de um sistema \emph{gimbal} de dois eixos que, recorrendo a sensores óticos (RGB), execute a deteção, seguimento e neutralização de alvos aéreos de pequena dimensão. Este sistema deve garantir o seguimento, minimizando o erro do mesmo através de algoritmos de visão computacional, de modo a assegurar a máxima incidência do laser no alvo.
 
 
+Por serem sensores passivos, as câmaras RGB dependem exclusivamente da radiação refletida pelo alvo, o que impõe restrições operacionais significativas. A eficácia do sistema é, portanto, limitada pelo sensor em cenários de baixa luminosidade, pela saturação em condições de incidência solar direta e pelo espalhamento de luz em ambientes com elevada nebulosidade ou nevoeiro. Adicionalmente, a resolução espacial para distâncias até 1 km constitui um desafio crítico. Devido à geometria de projeção ótica, a área ocupada pelo alvo no sensor decresce quadraticamente com a distância ($A \propto 1/d^2$), resultando na diluição da assinatura do alvo no ruído de fundo e dificultando a sua correta deteção. Este cenário compromete também a estimativa de profundidade via estereoscopia utilizando câmeras, a distância ao alvo é vastamente superior à linha de base (distância entre câmeras) permitida pelas dimensões do \emph{gimbal}, resultando em cálculos de coordenadas 3D inerentemente imprecisos. A nível da deteção, a seleção da arquitetura de visão computacional será pautada pelo compromisso entre a exatidão métrica e a latência de processamento dado que numa aplicação de seguimento em tempo real, o tempo de deteção constitui uma variável crítica para que o sistema consiga ser em tempo real.
+
+A latência total do sistema ($\tau_{total}$) é cumulativo e intrínseco à cadeia de processamento:
+\begin{equation}
+    \tau_{total} = t_{captura} + t_{processamento} + t_{atuacao},
+\end{equation}
+\myequations{Latência Total do Sistema}
+onde $t_{captura}$ é o tempo de aquisição do sensor, $t_{processamento}$ o tempo de execução dos algoritmos de visão computacional e cinemática inversa, e $t_{atuacao}$ o atraso mecânico dos motores. Desta forma, valor elevado de $\tau_{total}$ resulta num seguimento para uma posição obsoleta do alvo ($P_{t-\tau}$), impossibilitando a neutralização de ameaças dinâmicas.
+
+Relativamente à dinâmica, o sistema eletromecânico requer um dimensionamento de motores tal que a velocidade angular de saturação dos atuadores ($\omega_{sys}$) exceda a velocidade angular máxima da linha de vista do alvo ($\omega_{LOS}$):
+\begin{equation}
+    \omega_{sys} \ge \omega_{LOS_{max}}.
+\end{equation}
+\myequations{Requisito de Velocidade Angualar}
+
+Por fim, será necessário definir métricas de validação dos resultados experimentais, por forma a que seja possível quantificar a performance do sistema.
+
+\section{Objetivo da Dissertação}
+
+
+\subsection{Objetivos da Dissertação}
+\label{subsec:objetivos_Dissertacao}
+
+O objetivo desta dissertação consiste no desenvolvimento e validação experimental de uma prova de conceito de um sistema de deteção e seguimento de baixo custo, baseado em visão computacional. O projeto visa dotar a Marinha Portuguesa de conhecimento fundamental sobre a arquitetura, desafios de controlo e requisitos operacionais para uma possível futura implementação de sistemas laser de iluminação e designação no combate a ameaças assimétricas, especificamente drones. 
+
+No domínio da visão computacional, será realizada uma avaliação comparativa entre diferentes arquiteturas de Redes Neuronais para verificar e selecionar o melhor modelo de deteção e classificação robusta de alvos em tempo real. A partir da qual o fluxo de vídeo será processado para extrair as coordenadas de erro angular e guiar os eixos do \emph{gimbal}. Por fim, o estudo foca-se na verificação dos requisitos cinemáticos e geométricos necessários para atingir e manter a iluminação contínua do alvo a uma determinada distância limite, determinando analiticamente as especificações dos componentes mínimos necessários para viabilizar a execução bem-sucedida do protótipo.
+
+\section{Estrutura da Dissertação}
+
+\section{Estrutura da Dissertação}
+\label{sec:estrutura_dissertacao}
+
+Após o presente capítulo introdutório, a dissertação organiza-se em quatro capítulos subsequentes e uma secção conclusiva, estruturados de forma a fornecer uma progressão lógica entre a fundamentação teórica, a análise do estado da arte, a especificação da plataforma física e o projeto do sistema de controlo dinâmico.
+
+O \emph{segundo capítulo} é dedicado ao \emph{Enquadramento Teórico}, estabelecendo os princípios físicos e matemáticos fundamentais que sustentam o projeto. Esta secção aborda a modelação dinâmica da atuação mecânica, as matrizes de rotação aplicadas à cinemática inversa do mecanismo \emph{yaw-pitch}, os fundamentos da teoria de controlo linear em malha fechada e a geometria projetiva monocâmara (modelo \emph{pinhole} e calibração de distorção de lente). Adicionalmente, são introduzidos os conceitos de Redes Neuronais Convolucionais (CNN) e arquiteturas baseadas em \emph{transformers} voltadas para a deteção e classificação de objetos em tempo real.
+
+O \emph{terceiro capítulo} apresenta o \emph{Estado da Arte}, efetuando uma revisão da literatura sobre soluções tecnológicas de sistemas \emph{gimbal} anti-drone, tanto no panorama industrial de defesa como no âmbito académico. São examinados os algoritmos de deteção visual e as metodologias de seguimento de alvos mais robustas documentadas em competições internacionais, definindo a linha de base tecnológica necessária para a validação comparativa e seleção do melhor modelo de deteção para o protótipo.
+
+O \emph{quarto capítulo}, referente à \emph{Plataforma}, detalha o desenvolvimento físico, a instrumentação e a arquitetura de processamento distribuído do ecossistema mecatrónico. Descreve-se a conceção mecânica da estrutura desenvolvida para manufatura aditiva (FDM), a seleção e caracterização dos motores BLDC em regime de acionamento direto, e a integração dos \emph{encoders} magnéticos de alta resolução via protocolo SPI. Este capítulo engloba, fundamentalmente, a dedução analítica dos requisitos geométricos e cinemáticos necessários para garantir a iluminação contínua do alvo a uma distância operacional limite, determinando as especificações dos componentes mínimos viáveis para a execução do sistema.
+
+O \emph{quinto capítulo} foca-se no \emph{Controlo} do sistema, dividindo-se entre a modelação teórica e a identificação experimental da planta. Detalha-se o ensaio de varrimento em frequência em malha aberta, cujos diagramas de Bode foram mapeados através do método de deteção da passagem da onda por zero para extrair as funções de transferência numéricas de cada eixo. É apresentada a arquitetura de comutação baseada em limites de erro entre o controlador de varrimento em cascata e o controlador de seguimento direto (PI-D), culminando no desenvolvimento do modelo de simulação não-linear em \emph{Simulink} e na otimização de ganhos realizada via \emph{PID Tuner} do \emph{MATLAB}.
+
+Por fim, o capítulo de \emph{Conclusão} sintetiza os resultados alcançados e as principais contribuições científicas e práticas do trabalho para a Marinha Portuguesa, discutindo as limitações encontradas no protótipo e propondo linhas de desenvolvimento para trabalhos futuros.
 
 \end{introduction}

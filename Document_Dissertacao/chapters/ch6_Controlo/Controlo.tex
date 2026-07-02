@@ -8,7 +8,7 @@ O presente capítulo é dedicado à implementação do sistema de controlo em ma
 
 Sobre esta fundação, a arquitetura proposta adota uma estratégia de comutação baseada em limites de erro para conciliar a rapidez de captura com a precisão absoluta de apontamento, alternando de forma automática entre dois controladores estruturalmente independentes. O primeiro estágio é governado pelo Controlador de Varrimento, encarregue de executar as trajetórias sistemáticas de varrimento do céu e de aproximar celeremente o \emph{gimbal} da vizinhança da ameaça assim que esta é identificada pelo modelo de visão. Por ser projetado com uma margem de estabilidade conservadora para mitigar dinâmicas oscilatórias fora do campo de visão da câmara.
 
-A transição para o segundo estágio ocorre de forma automática assim que o módulo do erro angular de apontamento cai abaixo de um limiar predefinido ($|e(t)| \le \epsilon$), momento em que a arquitetura desativa o estágio inicial e comuta para o Controlador de Seguimento ($C_2$). Esta segunda estrutura apresenta uma parametrização significativamente mais agressiva que visa anular qualquer desfasamento cinemático residual, garantindo estritamente um erro em regime permanente nulo face a entradas em rampa de modo a fixar o feixe no centro do alvo. Para detalhar o desenvolvimento desta arquitetura, as secções seguintes abordam, de forma sequencial, o processo de identificação experimental em frequência, o projeto analítico dos controladores obtidos e a sua respetiva validação em bancada de ensaios.
+A transição para o segundo estágio ocorre de forma automática assim que o módulo do erro angular de apontamento cai abaixo de um limiar predefinido ($|e(t)| \le \epsilon$), momento em que a arquitetura desativa o estágio inicial e comuta para o Controlador de Seguimento. Esta segunda estrutura apresenta uma parametrização significativamente mais agressiva que visa anular qualquer desfasamento cinemático residual, garantindo estritamente um erro em regime permanente nulo face a entradas em rampa de modo a fixar o feixe no centro do alvo. Para detalhar o desenvolvimento desta arquitetura, as secções seguintes abordam, de forma sequencial, o processo de identificação experimental em frequência, o projeto analítico dos controladores obtidos e a sua respetiva validação em bancada de ensaios.
 
 \section{Modelação e Identificação}
 
@@ -17,16 +17,19 @@ A análise do subsistema de atuação requer a modelação matemática dos atuad
 \begin{equation}
     v_{as} = R_s i_{as} + (L_s - M)\frac{di_{as}}{dt} + e_{as}
     \label{eq:bldc_fase_a}
+    \myequations{Tensão de fase A do motor \ac{BLDC}}
 \end{equation}
 
 \begin{equation}
     v_{bs} = R_s i_{bs} + (L_s - M)\frac{di_{bs}}{dt} + e_{bs}
     \label{eq:bldc_fase_b}
+    \myequations{Tensão de fase B do motor \ac{BLDC}}
 \end{equation}
 
 \begin{equation}
     v_{cs} = R_s i_{cs} + (L_s - M)\frac{di_{cs}}{dt} + e_{cs}
     \label{eq:bldc_fase_c}
+    \myequations{Tensão de fase C do motor \ac{BLDC}}
 \end{equation}
 
 onde $v_{as}$, $v_{bs}$ e $v_{cs}$ representam as tensões aplicadas a cada fase, $R_s$ é a resistência do estator, $L_s$ e $M$ correspondem às indutâncias próprias e mútuas das bobinas, e $e_{as}$, $e_{bs}$, $e_{cs}$ denotam as forças contraeletromotrizes induzidas. O binário eletromagnético total ($T_e$) gerado no entreferro é deduzido a partir da potência elétrica convertida:
@@ -34,6 +37,7 @@ onde $v_{as}$, $v_{bs}$ e $v_{cs}$ representam as tensões aplicadas a cada fase
 \begin{equation}
     T_e = \frac{e_{as}i_{as} + e_{bs}i_{bs} + e_{cs}i_{cs}}{\omega_m}
     \label{eq:binario_bldc_completo}
+    \myequations{Binário eletromagnético do motor \ac{BLDC}}
 \end{equation}
 
 sendo $\omega_m$ a velocidade angular mecânica do rotor. Quando o motor é acionado recorrendo à estratégia clássica de comutação eletrónica por condução a $120^\circ$, em cada setor de operação existem apenas duas fases ativas em série a conduzir correntes de igual magnitude e sinal oposto, permanecendo a terceira fase em circuito aberto. Sob este regime estabilizado, as variáveis elétricas e as forças contraeletromotrizes trapezoidais simplificam-se, resultando numa produção de binário linear e idealmente constante.
@@ -43,11 +47,13 @@ Conforme estabelecido no \emph{Springer Handbook of Robotics} \parencite{sicilia
 \begin{equation}
     v_a = R_a i_a + L_a \frac{di_a}{dt} + v_b
     \label{eq:dc_eletrica}
+    \myequations{Equação elétrica do motor \ac{DC} simples}
 \end{equation}
 
 \begin{equation}
     J \frac{d\omega_m}{dt} + B \omega_m = T_m - \frac{T_l}{r}
     \label{eq:dc_mecanica}
+    \myequations{Equação mecânica do motor \ac{DC} simples}
 \end{equation}
 
 Nas Equações~\ref{eq:dc_eletrica} e~\ref{eq:dc_mecanica}, $v_a$ e $i_a$ são a tensão e a corrente equivalentes, $R_a$ e $L_a$ representam a resistência e a indutância vistas pelo controlador, $B$ dita o coeficiente de atrito viscoso, $v_b$ é a força contraeletromotriz ($v_b = K_b \omega_m$), $T_m$ é o binário motor ($T_m = K_t i_a$), $T_l$ traduz os binários de perturbação externa (carga) e $r$ indica a relação de transmissão mecânica. No protótipo desenvolvido nesta dissertação, os atuadores operam em regime de acionamento direto, ditando uma relação de transmissão unitária ($r = 1$) que elimina a necessidade de sistemas de engrenagens. Adicionalmente, devido a esta configuração mecânica de baixo atrito, às velocidades de operação reduzidas e ao amortecimento eletromecânico dominante introduzido por $K_b$, as perdas viscosas tornam-se numericamente insignificantes, assumindo-se por projeto que $B \approx 0$.
@@ -104,18 +110,21 @@ A partir da extração gráfica da frequência de corte mecânica ($\omega_c = 1
 \begin{equation}
     G(s) = \frac{\Theta(s)}{V_q(s)} = \frac{K}{s(\tau s + 1)} = \frac{K}{s^2\tau + s}
     \label{eq:funcao_transferencia_geral}
+    \myequations{Função de transferência genérica do sistema de posicionamento}
 \end{equation}
 
 Substituindo os parâmetros específicos extraídos experimentalmente para as constantes de tempo e ganhos de cada canal, obtêm-se as funções de transferência numéricas para os eixos de \emph{pitch} e \emph{yaw}, expressas respetivamente pelas Equações~\ref{eq:tf_pitch_completa} e~\ref{eq:tf_pitch_completa}:
 
 \begin{equation}
-    G_{\text{pitch}}(s) = \frac{K_{\text{pole}}}{s(s + a_{\text{yaw}})} = \frac{254.9}{s(s + 19.51)} = \frac{K_{\text{yaw}}}{s(\tau_{\text{yaw}} s + 1)} = \frac{-13.065}{s(0.0513s + 1)}
+    G_{\text{pitch}}(s) = \frac{K_{\text{pole}}}{s(s + a_{\text{pitch}})} = \frac{254.9}{s(s + 19.51)} = \frac{K_{\text{pitch}}}{s(\tau_{\text{pitch}} s + 1)} = \frac{13.065}{s(0.0513s + 1)}
     \label{eq:tf_pitch_completa}
+    \myequations{Função de transferência do eixo de \emph{Pitch}}
 \end{equation}
 
 \begin{equation}
-    G_{\text{pitch}}(s) = \frac{K_{\text{pole}}}{s(s + a_{\text{pitch}})} = \frac{13.85}{s(s + 1.807)} = \frac{K_{\text{pitch}}}{s(\tau_{\text{pitch}} s + 1)} = \frac{7.665}{s(0.553s + 1)}
+    G_{\text{yaw}}(s) = \frac{K_{\text{pole}}}{s(s + a_{\text{yaw}})} = \frac{13.85}{s(s + 1.807)} = \frac{K_{\text{yaw}}}{s(\tau_{\text{yaw}} s + 1)} = \frac{7.665}{s(0.553s + 1)}
     \label{eq:tf_yaw_completa}
+    \myequations{Função de transferência do eixo de \emph{Yaw}}
 \end{equation}
 
 Estas equações empíricas constituem a base matemática da planta, refletindo fielmente a resposta eletromecânica real de cada atuador, e serão utilizadas subsequentemente para o projeto, sintonização e simulação dos algoritmos de controlo em malha fechada.
@@ -125,7 +134,8 @@ Estas equações empíricas constituem a base matemática da planta, refletindo 
 
 \section{Arquitetura da Malha de Controlo}
 \label{sec:malha_controlo}
-A arquitetura de controlo desenvolvida para o posicionamento do \emph{gimbal} assenta numa estratégia de comutação de controladores baseada em limites de erro (\emph{error-triggered switching}). Esta abordagem permite segmentar a operação do sistema em duas tarefas distintas e sequenciais, otimizando de forma independente a fase de exploração do espaço e a fase de retenção precisa do feixe sobre a ameaça através de duas estruturas de controlo independentes.
+
+A arquitetura de controlo desenvolvida para o posicionamento do \emph{gimbal} assenta numa estratégia de comutação de controladores baseada em limites de erro. Todo o ciclo algorítmico em tempo real é instanciado no microcontrolador ESP32-S3, utilizando-se a biblioteca \emph{SimpleFOC}~\cite{simplefoc} para facilitar a abstração física dos atuadores e simplificar a execução do controlo vetorial de baixo nível. Esta abordagem permite segmentar a operação do sistema em duas tarefas distintas e sequenciais, otimizando de forma independente a fase de exploração do espaço e a fase de retenção precisa do feixe sobre a ameaça através de duas estruturas de controlo independentes.
 
 O primeiro estágio da arquitetura é constituído pelo controlo de varrimento, cuja função inicial é guiar o sistema através de trajetórias sistemáticas de busca no céu. Assim que o algoritmo de visão computacional identifica um \ac{UAV}, esta mesma estrutura atua de forma rápida para aproximar o alinhamento ótico da vizinhança imediata do alvo. Esta arquitetura necessita assegurar um erro nulo à entrada de um \emph{step}.
 
